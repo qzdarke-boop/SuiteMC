@@ -1,0 +1,456 @@
+name: PSDK
+version: '1.0.29'
+main: com.psdk.PSDK
+api-version: '1.21'
+description: Paper Server Development Kit
+authors: [Dev]
+softdepend:
+  - Vault
+  - PlaceholderAPI
+  - LuckPerms
+  - Nexo
+  - ModelEngine
+  - ProtocolLib
+
+commands:
+  caixa:
+    description: Comandos admin do sistema de crates
+    usage: /caixa <criar|deletar|item|removeitem|givechave|resetsaldo|resetlimite|setlimite|settipo|setcor|setkeynexo|listar|info>
+    permission: psdk.caixa
+  caixas:
+    description: Teleportar para as crates
+    usage: /caixas
+    aliases: [crates]
+  setcrates:
+    description: Definir local de teleporte das crates
+    usage: /setcrates
+    permission: psdk.setcrates
+  arena:
+    description: Comandos de gerenciamento de arena
+    usage: /arena <pos1|pos2|save|reset|wand>
+    permission: psdk.arena
+  thepit:
+    description: Comandos admin do ThePit
+    usage: /thepit <reset|resetkillsall|colocaritem|removeritem>
+    permission: psdk.thepit
+  eco:
+    description: Gerenciamento de economia (admin)
+    usage: /eco <givecoins|setcoins|removecoins|givetokens|settokens|removetokens> <jogador> <qtd>
+    permission: psdk.eco
+  coins:
+    description: Ver seu saldo de coins
+    usage: /coins [jogador]
+  pay:
+    description: Transferir coins ou tokens para outro jogador
+    usage: /pay <coins|tokens> <jogador> <quantia>
+  bounty:
+    description: Sistema de recompensas por abate
+    usage: /bounty [add <jogador> <quantia>]
+    aliases: [recompensa, recompensas]
+  spawn:
+    description: Voltar ao spawn
+    usage: /spawn
+  setspawn:
+    description: Definir o spawn do servidor
+    usage: /setspawn
+    permission: psdk.setspawn
+  setdeath:
+    description: Definir local de respawn ao morrer
+    usage: /setdeath
+    permission: psdk.setdeath
+  tokens:
+    description: Ver seu saldo de TOKENS
+    usage: /tokens [jogador]
+    aliases: [money, saldo, wallet]
+  stats:
+    description: Ver suas estatisticas
+    usage: /stats [jogador]
+  kills:
+    description: Ver kills e level
+    usage: /kills [jogador]
+  tops:
+    description: Abrir menu de rankings
+    usage: /tops
+  settopboard:
+    description: Colocar holograma de ranking
+    usage: /settopboard <kills|horas|coins>
+    permission: psdk.settopboard
+  removetopboard:
+    description: Remover holograma de ranking mais proximo
+    usage: /removetopboard
+    permission: psdk.settopboard
+  topboard:
+    description: Gerenciar hologramas de ranking
+    usage: /topboard <reload|reset>
+    permission: psdk.settopboard
+  regiao:
+    description: Gerenciamento de regioes protegidas
+    usage: /regiao <wand|criar|deletar|flag|info|list|flags|prioridade|settp|removetp>
+    permission: psdk.regiao
+  pitem:
+    description: Dar itens especiais a jogadores
+    usage: /pitem <jogador> <item> <tempo>
+    permission: psdk.pitem
+  shop:
+    description: Abrir a loja
+    usage: /shop
+  setarcolina:
+    description: Setar posicao e raio da colina
+    usage: /setarcolina [raio]
+    permission: psdk.setarcolina
+  removercolina:
+    description: Remover a colina
+    usage: /removercolina
+    permission: psdk.removercolina
+  donocolina:
+    description: Ver quem domina a colina
+    usage: /donocolina
+  tutorial:
+    description: Abrir o menu do servidor
+    usage: /tutorial
+  afk:
+    description: Ir para a area AFK
+    usage: /afk
+  setafk:
+    description: Definir local AFK
+    usage: /setafk
+    permission: psdk.setafk
+  tell:
+    description: Mensagem privada
+    aliases: [msg, w, t]
+  reply:
+    description: Responder msg privada
+    aliases: [r]
+  say:
+    description: Broadcast admin
+    permission: psdk.say
+  saytoggle:
+    description: Modo say automatico
+    aliases: [st]
+    permission: psdk.saytoggle
+  chatclear:
+    description: Limpar chat
+    aliases: [cc, limparchat]
+    permission: psdk.chatclear
+  lastmsg:
+    description: Historico de msgs de um jogador
+    permission: psdk.lastmsg
+  lockchat:
+    description: Bloquear chat
+    permission: psdk.lockchat
+  openchat:
+    description: Liberar chat
+    permission: psdk.openchat
+  spy:
+    description: Monitorar msgs privadas
+    permission: psdk.spy
+  anunciar:
+    description: Enviar anuncio
+    aliases: [announce]
+    permission: psdk.anunciar
+  settings:
+    description: Configuracoes pessoais
+    usage: /settings
+    aliases: [config]
+  clan:
+    description: Sistema de clans
+    usage: /clan [criar|deletar|aceitar|sair|convidar|expulsar|transferir|promover|rebaixar|anunciar|descricao|info|chat|ally|unally|rival|unrival]
+    aliases: [clans]
+  clanAdmin:
+    description: Comandos admin de clans
+    usage: /clanAdmin [delete|transfer|color]
+    permission: psdk.clan.admin
+  c:
+    description: Chat do clan
+    usage: /c <mensagem>
+  a:
+    description: Atalho para chat de aliança
+    usage: /a <mensagem>
+  ally:
+    description: Gerencia alianças e chat de aliança
+    usage: /ally <tag|chat|remove|list>
+  staff:
+    description: Ferramentas de staff
+    usage: /staff [lastcmd]
+  sc:
+    description: Chat exclusivo da staff
+    usage: /sc <mensagem>
+    permission: psdk.staff.chat
+    aliases: [staffchat]
+  ec:
+    description: Abrir ender chest
+    usage: /ec
+    aliases: [endchest, enderchest]
+  kit:
+    description: Abrir menu de kits
+    usage: /kit
+    aliases: [kits]
+  aniversariante:
+    description: Anunciar aniversariante e iniciar GGWave
+    usage: /aniversariante <jogador>
+    permission: psdk.aniversariante
+    aliases: [aniver, aniversario]
+  ecsee:
+    description: Ver a ender chest de outro jogador
+    usage: /ecsee <jogador>
+    permission: psdk.ecsee
+  invsee:
+    description: Ver e editar o inventario de outro jogador
+    usage: /invsee <jogador>
+    permission: psdk.invsee
+    aliases: [inv, openinv]
+  socias:
+    description: Ver redes sociais do servidor
+    usage: /socias
+    aliases: [social, redes]
+  live:
+    description: Anuncia que um jogador esta em live (link clicavel)
+    usage: /live <link> <nick>
+    permission: psdk.live
+  discord:
+    description: Ver link do Discord
+    usage: /discord
+    aliases: [dc]
+  spawnnpcdiscord:
+    description: Posiciona o NPC do Discord (Wumpus)
+    usage: /spawnnpcdiscord [remove]
+    permission: psdk.npc.discord
+  baus:
+    description: Admin dos baus de loot do mapa
+    usage: /baus <spawn|clear>
+    permission: psdk.baus
+  lixeiro:
+    description: Ver quando o lixeiro passa (limpa itens do chao)
+    usage: /lixeiro [agora]
+    aliases: [lixo]
+  boss:
+    description: Teleporta para a arena do boss
+    usage: /boss
+  pboss:
+    description: Comandos de admin do boss (spawn/kill/testsound)
+    usage: /pboss <spawn <cavaleiro|spooky|tower>|kill|testsound>
+    permission: psdk.boss.admin
+  setbossarena:
+    description: Define o destino do /boss (sua posicao)
+    usage: /setbossarena
+    permission: psdk.boss.admin
+  setbossspawn:
+    description: Define onde o boss nasce (sua posicao)
+    usage: /setbossspawn
+    permission: psdk.boss.admin
+  bossarena:
+    description: Define/gerencia a arena do boss (regiao + regen)
+    usage: /bossarena <pos1|pos2|save|regen|info>
+    permission: psdk.boss.admin
+  adminabuse:
+    description: Eventos cinematograficos de admin (Sammy gigante, mining2x, chestall)
+    usage: /adminabuse <start <nick>|stop|evento <Mining2x|chestall>>
+    permission: psdk.adminabuse
+  staffhud:
+    description: HUD de performance para staff (action bar)
+    usage: /staffhud
+    aliases: [shud]
+    permission: psdk.staff.hud
+  setvip:
+    description: Seta um VIP globalmente.
+    usage: /setvip <player> <categoria> <rank> <tempo> [-s]
+    permission: vip.admin
+  removevip:
+    description: Remove um VIP globalmente.
+    usage: /removevip <player> <categoria> <rank>
+    permission: vip.admin
+  viptime:
+    description: Vê o tempo restante dos VIPs.
+    usage: /viptime [player]
+  gg:
+    description: Manda um GG durante a comemoração de VIP.
+    usage: /gg
+  casar:
+    description: Pede casamento para outro jogador.
+    usage: /casar <jogador>
+  divorcio:
+    description: Divorcia do seu parceiro.
+    usage: /divorcio
+    aliases: [divorciar]
+  beijar:
+    description: Beija um jogador próximo.
+    usage: /beijar <jogador>
+  abracar:
+    description: Abraca um jogador próximo.
+    usage: /abracar <jogador>
+    aliases: [abraçar]
+  resetkills:
+    description: Reseta as kills de um jogador.
+    usage: /resetkills <jogador>
+    permission: psdk.thepit
+  resetplayer:
+    description: Reseta todos os dados de um jogador.
+    usage: /resetplayer <jogador>
+    permission: psdk.thepit
+
+permissions:
+  psdk.caixa:
+    description: Comandos admin de crates
+    default: op
+  psdk.setcrates:
+    description: Definir local de teleporte das crates
+    default: op
+  psdk.arena:
+    description: Gerenciamento de arena
+    default: op
+  psdk.thepit:
+    description: Comandos admin do ThePit
+    default: op
+  psdk.eco:
+    description: Gerenciamento de economia
+    default: op
+  psdk.setspawn:
+    description: Definir spawn do servidor
+    default: op
+  psdk.setdeath:
+    description: Definir local de respawn ao morrer
+    default: op
+  psdk.settopboard:
+    description: Colocar e gerenciar hologramas de ranking
+    default: op
+  psdk.regiao:
+    description: Gerenciamento de regioes
+    default: op
+  psdk.setarcolina:
+    description: Setar posicao da colina
+    default: op
+  psdk.removercolina:
+    description: Remover colina
+    default: op
+  psdk.setafk:
+    description: Definir local AFK
+    default: op
+  psdk.pitem:
+    description: Permite dar itens especiais
+    default: op
+  psdk.say:
+    description: Broadcast admin
+    default: op
+  psdk.saytoggle:
+    description: Modo say automatico
+    default: op
+  psdk.chatclear:
+    description: Limpar chat
+    default: op
+  psdk.lastmsg:
+    description: Historico de msgs
+    default: op
+  psdk.lockchat:
+    description: Bloquear chat
+    default: op
+  psdk.openchat:
+    description: Liberar chat
+    default: op
+  psdk.spy:
+    description: Monitorar msgs privadas
+    default: op
+  psdk.anunciar:
+    description: Enviar anuncio
+    default: op
+  psdk.chatbypass:
+    description: Bypass de chat bloqueado
+    default: op
+  psdk.chatdelay.bypass:
+    description: Pula o delay de 3.5s do chat
+    default: op
+  psdk.chat.replybutton:
+    description: Mostra o botao clicavel [R] para responder jogadores no chat
+    default: op
+  psdk.tell.bypass:
+    description: Envia PM mesmo para quem desativou mensagens privadas
+    default: op
+  psdk.antilink.bypass:
+    description: Bypass do filtro de links
+    default: op
+  psdk.colors:
+    description: Permite usar tags MiniMessage no chat
+    default: false
+  psdk.chat.hexbypass:
+    description: Permite usar cores hex, gradientes e rainbow no chat
+    default: op
+  psdk.crates.use:
+    description: Permite usar crates
+    default: true
+  psdk.thepit.play:
+    description: Permite jogar no ThePit
+    default: true
+  psdk.combat.bypass:
+    description: Ignora bloqueio de comandos em combate
+    default: op
+  psdk.region.bypass:
+    description: Ignora restricoes de regioes protegidas
+    default: op
+  psdk.staff.hud:
+    description: HUD de performance para staff
+    default: op
+  psdk.staff.lastcmd:
+    description: Ver ultimos comandos de jogadores
+    default: op
+  psdk.staff.chat:
+    description: Usar o chat exclusivo da staff (/sc)
+    default: op
+  psdk.infinitetag:
+    description: Tag de clan sem limite de caracteres
+    default: op
+  psdk.clan.admin:
+    description: Comandos admin de clans
+    default: op
+  psdk.baus:
+    description: Admin dos baus de loot do mapa
+    default: op
+  psdk.lixeiro.admin:
+    description: Forcar a limpeza do lixeiro (/lixeiro agora)
+    default: op
+  psdk.live:
+    description: Anunciar live de um jogador
+    default: op
+  psdk.aniversariante:
+    description: Anunciar aniversariante e iniciar GGWave
+    default: op
+  psdk.marriage.bypass:
+    description: Ignora o cooldown de 12h para casar novamente
+    default: op
+  psdk.npc.discord:
+    description: Posicionar/remover o NPC do Discord
+    default: op
+  psdk.boss.admin:
+    description: Comandos de admin do boss (spawn/kill/set locais)
+    default: op
+  psdk.boss.arenabypass:
+    description: Pode sair da arena do boss sem ser teleportado
+    default: op
+  psdk.adminabuse:
+    description: Disparar eventos de admin abuse (cutscenes/eventos)
+    default: op
+  psdk.ecsee:
+    description: Ver a ender chest de outros jogadores
+    default: op
+  psdk.invsee:
+    description: Ver e editar o inventario de outros jogadores
+    default: op
+  psdk.afk.tier0:
+    description: AFK farm — 50 coins/min (Tier 0)
+    default: false
+  psdk.afk.tier1:
+    description: AFK farm — 75 coins/min (Tier 1)
+    default: false
+  psdk.afk.tier2:
+    description: AFK farm — 100 coins/min (Tier 2)
+    default: false
+  psdk.afk.tier3:
+    description: AFK farm — 150 coins/min (Tier 3)
+    default: false
+  psdk.afk.tier4:
+    description: AFK farm — 200 coins/min (Tier 4)
+    default: false
+  psdk.afk.tier5:
+    description: AFK farm — 250 coins/min (Tier 5 máximo)
+    default: false
+  vip.admin:
+    description: Acesso aos comandos de gerenciamento de VIP
+    default: op

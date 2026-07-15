@@ -1,0 +1,22 @@
+# Build output
+build/
+target/
+out/
+dist/
+
+# Gradle
+.gradle/
+*.iml
+*.ipr
+*.iws
+
+# IntelliJ
+.idea/
+
+# Logs
+*.log
+hs_err_pid*.log
+replay_pid*.log
+
+# OS
+.DS_Store

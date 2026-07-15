@@ -1,0 +1,63 @@
+plugins {
+    id 'java'
+    id 'com.gradleup.shadow' version '8.3.5'
+}
+
+group = 'com.psdk'
+version = '1.0.0'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+compileJava.options.encoding = 'UTF-8'
+
+repositories {
+    maven { url 'https://repo.papermc.io/repository/maven-public/' }
+    maven { url 'https://jitpack.io' }
+    maven { url 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
+    maven { url 'https://repo.nexomc.com/releases' }
+    maven { url 'https://repo.dmulloy2.net/repository/public/' }
+}
+
+dependencies {
+    compileOnly 'io.papermc.paper:paper-api:1.21.4-R0.1-SNAPSHOT'
+    compileOnly 'com.github.MilkBowl:VaultAPI:1.7.1'
+    compileOnly 'me.clip:placeholderapi:2.11.6'
+    compileOnly 'net.luckperms:api:5.4'
+    compileOnly 'com.nexomc:nexo:0.9.0'
+    compileOnly 'io.netty:netty-all:4.1.115.Final'
+    compileOnly 'com.comphenix.protocol:ProtocolLib:5.3.0'
+    implementation 'org.xerial:sqlite-jdbc:3.46.0.0'
+}
+
+processResources {
+    filesMatching('plugin.yml') {
+        expand version: project.version
+    }
+}
+
+jar {
+    manifest {
+        attributes 'paperweight-mappings-namespace': 'mojang'
+    }
+}
+
+shadowJar {
+    archiveBaseName = 'psdk'
+    archiveVersion = project.version
+    archiveClassifier = ''
+
+    manifest {
+        attributes 'paperweight-mappings-namespace': 'mojang'
+    }
+
+    relocate 'org.sqlite', 'com.psdk.libs.sqlite'
+
+    minimize {
+        exclude(dependency('org.xerial:sqlite-jdbc:.*'))
+    }
+}
+
+build.dependsOn shadowJar
