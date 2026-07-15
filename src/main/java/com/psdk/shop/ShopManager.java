@@ -65,9 +65,9 @@ public class ShopManager {
     // Três itens centralizados na 2ª linha (slots 11/13/15), com um slot vazio entre eles.
     // Preços centralizados aqui (Troca de Posição = 600, conforme pedido).
     private final List<SpecialEntry> specialItems = List.of(
-            new SpecialEntry(com.psdk.pitems.PSDKItems.ItemType.TROCA_POSICAO, 600,  11),
-            new SpecialEntry(com.psdk.pitems.PSDKItems.ItemType.TRAP,          800,  13),
-            new SpecialEntry(com.psdk.pitems.PSDKItems.ItemType.JAULA,         1200, 15)
+            new SpecialEntry(com.psdk.pitems.PSDKItems.ItemType.TROCA_POSICAO, 600,   11),
+            new SpecialEntry(com.psdk.pitems.PSDKItems.ItemType.TRAP,          600,   13),
+            new SpecialEntry(com.psdk.pitems.PSDKItems.ItemType.JAULA,         15000, 15)
     );
 
     public ShopManager() {
