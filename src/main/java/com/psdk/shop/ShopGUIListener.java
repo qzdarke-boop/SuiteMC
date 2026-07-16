@@ -105,8 +105,13 @@ public class ShopGUIListener implements Listener {
                     open(player, new ShopState(Screen.SUBMENU, "misto", -1, 0), ShopGUI.buildSubMenu(sm, "misto"));
                     return;
                 }
-                ShopManager.SpecialEntry se = sm.getSpecialBySlot(slot);
-                if (se != null) buySpecial(player, se);
+                // Igual aos outros itens: abre a tela de quantidade (1x/5x/10x/32x).
+                int specialIndex = sm.getSpecialIndexBySlot(slot);
+                if (specialIndex >= 0) {
+                    open(player,
+                         new ShopState(Screen.QUANTITY, "misto_especiais", specialIndex, 0),
+                         ShopGUI.buildQuantity(sm, "misto_especiais", specialIndex, player));
+                }
             }
 
             case CATEGORY -> {
@@ -136,7 +141,12 @@ public class ShopGUIListener implements Listener {
 
             case QUANTITY -> {
                 if (slot == 27) {
-                    openCategory(player, sm, state.category, state.page);
+                    // Voltar: itens especiais retornam ao menu Itens Especiais; os demais à categoria.
+                    if ("misto_especiais".equals(state.category)) {
+                        open(player, new ShopState(Screen.SPECIAL, "misto_especiais", -1, 0), ShopGUI.buildSpecial(sm));
+                    } else {
+                        openCategory(player, sm, state.category, state.page);
+                    }
                     return;
                 }
                 int qty = switch (slot) {
@@ -146,7 +156,13 @@ public class ShopGUIListener implements Listener {
                     case 15 -> 32;
                     default -> 0;
                 };
-                if (qty > 0) buy(player, state.category, state.index, qty);
+                if (qty > 0) {
+                    if ("misto_especiais".equals(state.category)) {
+                        buySpecial(player, state.index, qty);
+                    } else {
+                        buy(player, state.category, state.index, qty);
+                    }
+                }
             }
         }
     }
@@ -297,22 +313,26 @@ public class ShopGUIListener implements Listener {
     // ─────────────────────────────────────────────────────────────────────────
 
     /**
-     * Compra um item especial: mesmo fluxo de economia/entrega das demais categorias.
-     * O item entregue é uma instância NOVA e limpa da factory oficial (versão
-     * PERMANENTE, com PDC/habilidade corretos) — sem as linhas de exibição do menu e
-     * SEM iniciar cooldown (o cooldown só começa no uso válido da habilidade).
+     * Compra um item especial em quantidade (1/5/10/32): mesmo fluxo de economia/entrega
+     * das demais categorias. Os itens entregues são instâncias NOVAS e limpas da factory
+     * oficial (versão PERMANENTE, com PDC/habilidade corretos) — sem as linhas de exibição
+     * do menu e SEM iniciar cooldown (o cooldown só começa no uso válido da habilidade).
      */
-    private void buySpecial(Player player, ShopManager.SpecialEntry entry) {
-        if (entry == null) return;
+    private void buySpecial(Player player, int index, int qty) {
+        ShopManager sm = plugin.getShopManager();
+        ShopManager.SpecialEntry entry = sm.getSpecial(index);
+        if (entry == null || qty <= 0) return;
 
-        double price = entry.price();
-        if (!plugin.getEconomyManager().removeCoins(player.getUniqueId(), price)) {
+        double total = qty * entry.price();
+        if (!plugin.getEconomyManager().removeCoins(player.getUniqueId(), total)) {
             player.sendMessage(mm.deserialize("<#FF0000>Você não tem coins suficientes!"));
             return;
         }
 
         // Item real da factory (permanente): ID interno, PDC, brilho, lore e habilidade.
+        // addItem já divide em stacks respeitando o tamanho máximo do material.
         ItemStack item = com.psdk.pitems.PSDKItems.create(entry.type());
+        item.setAmount(qty);
 
         Map<Integer, ItemStack> overflow = player.getInventory().addItem(item);
         for (ItemStack drop : overflow.values()) {
@@ -320,6 +340,11 @@ public class ShopGUIListener implements Listener {
         }
 
         player.sendMessage(mm.deserialize("<#10fc46>Compra realizada!"));
+
+        // Reabre a tela de quantidade com o saldo atualizado (igual à compra normal).
+        transitioning.add(player.getUniqueId());
+        player.openInventory(ShopGUI.buildQuantity(sm, "misto_especiais", index, player));
+        transitioning.remove(player.getUniqueId());
     }
 
     // ─────────────────────────────────────────────────────────────────────────

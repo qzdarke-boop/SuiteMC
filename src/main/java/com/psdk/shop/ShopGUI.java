@@ -332,6 +332,12 @@ public class ShopGUI implements InventoryHolder {
     // ─────────────────────────────────────────────────────────────────────────
 
     public static Inventory buildQuantity(ShopManager sm, String category, int index, Player player) {
+        // Itens Especiais usam o MESMO fluxo de quantidade (1x/5x/10x/32x), só que o
+        // preview é o item real da factory e o preço vem do SpecialEntry.
+        if ("misto_especiais".equals(category)) {
+            return buildSpecialQuantity(sm, index, player);
+        }
+
         ShopGUI holder = new ShopGUI();
         Inventory inv = Bukkit.createInventory(holder, 36, TITLE);
         holder.inventory = inv;
@@ -358,10 +364,65 @@ public class ShopGUI implements InventoryHolder {
         }
         inv.setItem(11, preview);
 
+        addQuantityButtons(inv, entry.price(), playerCoins);
+
+        ItemStack back = new ItemStack(Material.ARROW);
+        ItemMeta backMeta = back.getItemMeta();
+        if (backMeta != null) {
+            backMeta.displayName(mm.deserialize("<!italic><#fcc850>Voltar"));
+            back.setItemMeta(backMeta);
+        }
+        inv.setItem(27, back);
+
+        return inv;
+    }
+
+    /**
+     * Tela de quantidade de um item ESPECIAL (Troca de Posição / Cadeia / Jaula).
+     * Idêntica à tela de quantidade normal (mesmos slots 11/12-15/27, mesmos botões),
+     * mas o preview é o item real da factory e o preço vem do {@link ShopManager.SpecialEntry}.
+     */
+    private static Inventory buildSpecialQuantity(ShopManager sm, int index, Player player) {
+        ShopGUI holder = new ShopGUI();
+        Inventory inv = Bukkit.createInventory(holder, 36, TITLE);
+        holder.inventory = inv;
+
+        ShopManager.SpecialEntry entry = sm.getSpecial(index);
+        if (entry == null) return inv;
+
+        double playerCoins = PSDK.getInstance().getEconomyManager().getCoins(player.getUniqueId());
+
+        // Preview = item real (aparência/lore/habilidade) + preço unitário no fim da lore.
+        ItemStack preview = com.psdk.pitems.PSDKItems.create(entry.type());
+        ItemMeta previewMeta = preview.getItemMeta();
+        if (previewMeta != null) {
+            List<Component> lore = previewMeta.lore() != null ? new ArrayList<>(previewMeta.lore()) : new ArrayList<>();
+            lore.add(Component.empty());
+            lore.add(mm.deserialize("<!italic><#a4a4a4>Preço unitário: <#fcc850>" + String.format("%.0f", entry.price()) + " coins"));
+            previewMeta.lore(lore);
+            preview.setItemMeta(previewMeta);
+        }
+        inv.setItem(11, preview);
+
+        addQuantityButtons(inv, entry.price(), playerCoins);
+
+        ItemStack back = new ItemStack(Material.ARROW);
+        ItemMeta backMeta = back.getItemMeta();
+        if (backMeta != null) {
+            backMeta.displayName(mm.deserialize("<!italic><#fcc850>Voltar"));
+            back.setItemMeta(backMeta);
+        }
+        inv.setItem(27, back);
+
+        return inv;
+    }
+
+    /** Coloca os quatro botões de quantidade (1x/5x/10x/32x) com preço e cor por saldo. */
+    private static void addQuantityButtons(Inventory inv, double unitPrice, double playerCoins) {
         int[] qtdSlots = {12, 13, 14, 15};
         int[] qtds     = {1, 5, 10, 32};
         for (int i = 0; i < qtdSlots.length; i++) {
-            double total     = qtds[i] * entry.price();
+            double total     = qtds[i] * unitPrice;
             boolean canAfford = playerCoins >= total;
             Material glassMat = canAfford ? Material.GREEN_STAINED_GLASS_PANE : Material.RED_STAINED_GLASS_PANE;
             ItemStack btn  = new ItemStack(glassMat);
@@ -377,16 +438,6 @@ public class ShopGUI implements InventoryHolder {
             }
             inv.setItem(qtdSlots[i], btn);
         }
-
-        ItemStack back = new ItemStack(Material.ARROW);
-        ItemMeta backMeta = back.getItemMeta();
-        if (backMeta != null) {
-            backMeta.displayName(mm.deserialize("<!italic><#fcc850>Voltar"));
-            back.setItemMeta(backMeta);
-        }
-        inv.setItem(27, back);
-
-        return inv;
     }
 
     // ─────────────────────────────────────────────────────────────────────────

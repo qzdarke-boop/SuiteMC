@@ -504,6 +504,20 @@ public class ShopManager {
         return null;
     }
 
+    /** Produto especial pelo índice na lista, ou null se fora do intervalo. */
+    public SpecialEntry getSpecial(int index) {
+        if (index < 0 || index >= specialItems.size()) return null;
+        return specialItems.get(index);
+    }
+
+    /** Índice de um produto especial pelo slot do menu, ou -1 se não houver. */
+    public int getSpecialIndexBySlot(int slot) {
+        for (int i = 0; i < specialItems.size(); i++) {
+            if (specialItems.get(i).slot() == slot) return i;
+        }
+        return -1;
+    }
+
     public Material getIcon(String category) {
         return switch (category) {
             case "armas"                  -> Material.DIAMOND_SWORD;
