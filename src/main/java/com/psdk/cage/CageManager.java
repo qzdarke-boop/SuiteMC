@@ -233,7 +233,7 @@ public class CageManager {
 
     /**
      * Agenda a remoção automática desta Jaula após {@link #CAGE_MAX_DURATION_MINUTES} min.
-     * A tarefa é vinculada exclusivamente a esta instância; é cancelada em {@link #destroy}
+     * A tarefa é vinculada exclusivamente a esta instância; é cancelada em {@link #destroyCage}
      * caso a Jaula seja destruída antes (5 tentativas / limpeza), evitando dupla remoção.
      */
     private void scheduleDuration(Cage cage) {
@@ -241,7 +241,8 @@ public class CageManager {
             durationTasks.remove(cage.getId());
             Cage current = cages.get(cage.getId());
             if (current != null && current.isActive()) {
-                destroy(current, true); // tempo esgotado → destrói e libera os presos
+                // MESMA rotina completa das 5 quebras — só o motivo muda (mensagem/som/log).
+                destroyCage(current, DestroyReason.TIME_EXPIRED);
             }
         }, CAGE_MAX_DURATION_TICKS);
         durationTasks.put(cage.getId(), task);
@@ -433,7 +434,7 @@ public class CageManager {
         showProgress(cage);
 
         if (cage.getHits() >= HITS_TO_BREAK) {
-            destroy(cage, true);
+            destroyCage(cage, DestroyReason.BREAK_COUNT);
         }
     }
 
@@ -473,23 +474,50 @@ public class CageManager {
     // ─────────────────────────────── Destruição ───────────────────────────────
 
     /**
-     * Destrói a Jaula: restaura os blocos originais, limpa índices/dados, libera os
-     * presos (com anti-sufocamento) e reproduz efeitos discretos.
-     *
-     * @param natural {@code true} quando destruída pelas 5 tentativas; {@code false}
-     *                em limpeza automática (sem jogadores) / shutdown.
+     * Motivo do encerramento da Jaula. Só influencia mensagens/sons/logs — a rotina de
+     * limpeza e libertação é EXATAMENTE a mesma para todos (ver {@link #destroyCage}).
      */
-    public void destroy(Cage cage, boolean natural) {
+    public enum DestroyReason {
+        BREAK_COUNT,   // 5 quebras válidas pelos presos
+        TIME_EXPIRED,  // duração máxima da estrutura (3 min) esgotada
+        EMPTY,         // ficou sem ninguém dentro → limpeza automática
+        SHUTDOWN       // reload / desligamento do servidor
+    }
+
+    /**
+     * Método CENTRAL e ÚNICO de encerramento da Jaula, usado por TODOS os fluxos
+     * (5 quebras, tempo esgotado, limpeza por vazio e shutdown). Cuida tanto da
+     * estrutura física quanto do estado LÓGICO dos presos, de forma idempotente:
+     *
+     * <ol>
+     *   <li>Marca a Jaula como encerrada e a remove do registro ativo ANTES de limpar
+     *       (idempotência: uma 2ª chamada — ex.: 5ª quebra ~junto do fim do tempo — retorna cedo);</li>
+     *   <li>Cancela a tarefa de duração vinculada (evita 2º encerramento);</li>
+     *   <li>Restaura os blocos originais (só onde ainda for o nosso vidro);</li>
+     *   <li>Limpa índices espaciais, persistência e TODAS as referências da estrutura;</li>
+     *   <li>Liberta cada preso: remove o estado lógico, ressincroniza o cliente (mata a
+     *       colisão-fantasma dos vidros que sumiram), garante posição segura e reconfere
+     *       no tick seguinte (spawn como último recurso).</li>
+     * </ol>
+     *
+     * Como o estado lógico (playerCage / índices / active=false) é limpo aqui, todas as
+     * verificações que dependem da Jaula ({@code onMove}, teleporte, /spawn, Ender Pearl,
+     * itens especiais) voltam ao normal IMEDIATAMENTE, nos dois fluxos de destruição.
+     */
+    public void destroyCage(Cage cage, DestroyReason reason) {
         if (cage == null) return;
-        if (cages.remove(cage.getId()) == null) return; // já removida
+        // IDEMPOTÊNCIA: só o primeiro encerramento passa daqui (marca como encerrada antes de limpar).
+        if (cages.remove(cage.getId()) == null) return;
         cage.setActive(false);
 
-        // Cancela o timer de duração desta Jaula (se as tentativas a destruíram antes,
-        // isso impede uma segunda remoção pela tarefa automática).
+        // Cancela SEMPRE a tarefa de duração desta Jaula (se as 5 quebras encerraram antes,
+        // isso impede a remoção automática de rodar de novo; e vice-versa).
         org.bukkit.scheduler.BukkitTask task = durationTasks.remove(cage.getId());
         if (task != null) task.cancel();
 
+        // 1) Restaura os blocos originais (guarda os que voltaram para ressincronizar o cliente).
         World world = Bukkit.getWorld(cage.getWorld());
+        List<Block> restored = new ArrayList<>();
         if (world != null) {
             for (Cage.TempBlock tb : cage.getTempBlocks()) {
                 Block b = world.getBlockAt(tb.x(), tb.y(), tb.z());
@@ -497,26 +525,33 @@ public class CageManager {
                 if (b.getType() == Material.RED_STAINED_GLASS) {
                     try {
                         b.setBlockData(Bukkit.createBlockData(tb.originalData()), false);
+                        restored.add(b);
                     } catch (Throwable ignored) { }
                 }
             }
         }
 
+        // 2) Limpa índices espaciais e persistência da estrutura.
         unregister(cage);
         deletePersist(cage);
 
-        // Libera os presos e evita sufocamento pelos blocos naturais que voltaram.
+        // 3) Liberta os presos (mesma rotina para todos os motivos "vivos").
+        boolean announce   = (reason == DestroyReason.BREAK_COUNT || reason == DestroyReason.TIME_EXPIRED);
+        boolean liveServer = (reason != DestroyReason.SHUTDOWN); // no shutdown não dá pra teleportar/agendar
         List<UUID> freed = new ArrayList<>();
         for (Map.Entry<UUID, UUID> e : playerCage.entrySet()) {
             if (e.getValue().equals(cage.getId())) freed.add(e.getKey());
         }
         for (UUID uid : freed) {
+            // Remove TODO o estado lógico do jogador vinculado a esta Jaula.
             playerCage.remove(uid);
             attemptDebounce.remove(uid);
+            outsideMsgCooldown.remove(uid);
+
             Player p = Bukkit.getPlayer(uid);
             if (p == null || !p.isOnline()) continue;
-            ensureNotSuffocating(p, cage);
-            if (natural) {
+            if (liveServer) releasePlayer(p, cage, restored);
+            if (announce) {
                 p.sendMessage(mm.deserialize("<#10fc46><bold>Jaula ▸ <reset><#cbd1d7>A Jaula foi destruída! Você está livre."));
             }
         }
@@ -524,18 +559,53 @@ public class CageManager {
         destructionEffect(cage, world);
     }
 
-    private void ensureNotSuffocating(Player p, Cage cage) {
-        Block feet = p.getLocation().getBlock();
-        Block head = feet.getRelative(0, 1, 0);
-        if (!feet.getType().isSolid() && !head.getType().isSolid()) return;
+    /**
+     * Solta de fato um jogador da Jaula recém-encerrada:
+     * <ul>
+     *   <li>Ressincroniza os blocos restaurados para o cliente (evita ficar preso na
+     *       colisão-fantasma dos vidros que já sumiram — causa do bug ao expirar o tempo
+     *       com o jogador parado);</li>
+     *   <li>Garante uma posição segura (usa a atual se já for; senão o antigo interior;
+     *       spawn como fallback final);</li>
+     *   <li>Reconfere no tick seguinte para não sobrar dessincronização.</li>
+     * </ul>
+     */
+    private void releasePlayer(Player p, Cage cage, List<Block> restored) {
+        // Ressincroniza os vidros que voltaram a ser o bloco original (mata a colisão-fantasma).
+        for (Block b : restored) {
+            try { p.sendBlockChange(b.getLocation(), b.getBlockData()); } catch (Throwable ignored) { }
+        }
 
-        World world = p.getWorld();
-        // Procura uma coluna segura próxima ao centro, ainda dentro do antigo interior.
-        Location safe = findSafeInterior(world,
-                cage.getMinX(), cage.getMinY(), cage.getMinZ(),
-                cage.getMaxX(), cage.getMaxY(), cage.getMaxZ(),
-                p.getLocation().getBlockX(), p.getLocation().getBlockZ(), p.getLocation());
-        if (safe != null) p.teleport(safe);
+        // Se a posição atual não for segura, move para uma coluna livre do antigo interior.
+        if (safeStandingOrNull(p.getLocation()) == null) {
+            Location safe = findSafeInterior(p.getWorld(),
+                    cage.getMinX(), cage.getMinY(), cage.getMinZ(),
+                    cage.getMaxX(), cage.getMaxY(), cage.getMaxZ(),
+                    p.getLocation().getBlockX(), p.getLocation().getBlockZ(), p.getLocation());
+            if (safe == null) safe = plugin.getSpawnLocation();
+            if (safe != null) p.teleport(safe);
+        }
+
+        // Verificação final no tick seguinte: se ainda estiver preso/dessincronizado, corrige.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!p.isOnline()) return;
+            if (safeStandingOrNull(p.getLocation()) != null) return; // ok, livre
+            Location retry = findSafeInterior(p.getWorld(),
+                    cage.getMinX(), cage.getMinY(), cage.getMinZ(),
+                    cage.getMaxX(), cage.getMaxY(), cage.getMaxZ(),
+                    p.getLocation().getBlockX(), p.getLocation().getBlockZ(), p.getLocation());
+            if (retry == null) retry = plugin.getSpawnLocation();
+            if (retry != null) p.teleport(retry);
+        });
+    }
+
+    /** A própria localização se pés e cabeça estiverem livres (não sufoca); senão {@code null}. */
+    private Location safeStandingOrNull(Location loc) {
+        if (loc == null || loc.getWorld() == null) return null;
+        Block feet = loc.getBlock();
+        Block head = feet.getRelative(0, 1, 0);
+        if (feet.getType().isSolid() || head.getType().isSolid()) return null;
+        return loc;
     }
 
     private void destructionEffect(Cage cage, World world) {
@@ -559,7 +629,7 @@ public class CageManager {
         Cage cage = cages.get(cageId);
         if (cage == null) return;
         if (!hasAnyPlayerInside(cage)) {
-            destroy(cage, false);
+            destroyCage(cage, DestroyReason.EMPTY);
         }
     }
 
@@ -644,7 +714,7 @@ public class CageManager {
     /** Restaura e limpa TODAS as Jaulas ativas. Chamado no onDisable (antes do DB fechar). */
     public void shutdown() {
         for (Cage cage : new ArrayList<>(cages.values())) {
-            destroy(cage, false);
+            destroyCage(cage, DestroyReason.SHUTDOWN);
         }
         cages.clear();
         blockIndex.clear();
