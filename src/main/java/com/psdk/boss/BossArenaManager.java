@@ -286,7 +286,7 @@ public class BossArenaManager implements Listener {
                 minutesUntilRegen--;
                 if (minutesUntilRegen == AVISO_MINUTOS) {
                     plugin.getServer().sendMessage(MM.deserialize(" "));
-                    plugin.getServer().sendMessage(MM.deserialize("<#e22c27>A arena vai reiniciar daqui <#6817ff>" + AVISO_MINUTOS + " minutos<#e22c27>! Cuidado!"));
+                    plugin.getServer().sendMessage(MM.deserialize("<#e22c27>A arena vai reiniciar daqui <#fcc850>" + AVISO_MINUTOS + " minutos<#e22c27>! Cuidado!"));
                     plugin.getServer().sendMessage(MM.deserialize(" "));
                 }
                 if (minutesUntilRegen <= 0) {
