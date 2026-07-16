@@ -36,10 +36,10 @@ public class BossSetCommand implements CommandExecutor {
 
         if (command.getName().equalsIgnoreCase("setbossarena")) {
             plugin.getBossManager().setArena(player.getLocation());
-            player.sendMessage(mm.deserialize("<#10fc46>Arena do boss definida! O <#fcc850>/boss <#10fc46>leva pra cá."));
+            player.sendMessage(mm.deserialize("<#10fc46>Arena do boss definida! O <#6817ff>/boss <#10fc46>leva pra cá."));
         } else {
             plugin.getBossManager().setBossSpawn(player.getLocation());
-            player.sendMessage(mm.deserialize("<#10fc46>Local de nascimento do boss definido! Ele nasce aqui a cada <#fcc850>1h30<#10fc46>."));
+            player.sendMessage(mm.deserialize("<#10fc46>Local de nascimento do boss definido! Ele nasce aqui a cada <#6817ff>1h30<#10fc46>."));
         }
         player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1.5f);
         return true;

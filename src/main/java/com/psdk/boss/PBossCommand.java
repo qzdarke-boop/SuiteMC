@@ -41,18 +41,18 @@ public class PBossCommand implements CommandExecutor, TabCompleter {
             if (alive) {
                 long exp = plugin.getBossManager().getBossExpireMillis() - now;
                 sender.sendMessage(mm.deserialize("  <#10fc46>Boss VIVO agora<#a4a4a4>"
-                        + (exp > 0 ? " — vai embora em <#fcc850>" + formatDuration(exp) : "")));
+                        + (exp > 0 ? " — vai embora em <#6817ff>" + formatDuration(exp) : "")));
             } else {
                 long next = plugin.getBossManager().getNextAutoSpawnMillis() - now;
-                sender.sendMessage(mm.deserialize("  <#a4a4a4>Sem boss vivo — próximo automático em <#fcc850>"
+                sender.sendMessage(mm.deserialize("  <#a4a4a4>Sem boss vivo — próximo automático em <#6817ff>"
                         + (next > 0 ? formatDuration(next) : "instantes")));
             }
-            sender.sendMessage(mm.deserialize("  <#fcc850>/pboss spawn <cavaleiro|spooky|tower> <#a4a4a4>- Invoca o boss escolhido"));
-            sender.sendMessage(mm.deserialize("  <#fcc850>/pboss kill <#a4a4a4>- Remove o boss ativo"));
-            sender.sendMessage(mm.deserialize("  <#fcc850>/pboss interval <minutos> <#a4a4a4>- Intervalo do auto-spawn (atual: <#fcc850>" + min + " min<#a4a4a4>)"));
-            sender.sendMessage(mm.deserialize("  <#fcc850>/pboss lifetime <minutos> <#a4a4a4>- Tempo de vida do boss (atual: <#fcc850>" + life + " min<#a4a4a4>)"));
-            sender.sendMessage(mm.deserialize("  <#fcc850>/pboss testsound <#a4a4a4>- Testa os sons custom"));
-            sender.sendMessage(mm.deserialize("  <#a4a4a4>Defina os locais com <#fcc850>/setbossarena <#a4a4a4>e <#fcc850>/setbossspawn"));
+            sender.sendMessage(mm.deserialize("  <#6817ff>/pboss spawn <cavaleiro|spooky|tower> <#a4a4a4>- Invoca o boss escolhido"));
+            sender.sendMessage(mm.deserialize("  <#6817ff>/pboss kill <#a4a4a4>- Remove o boss ativo"));
+            sender.sendMessage(mm.deserialize("  <#6817ff>/pboss interval <minutos> <#a4a4a4>- Intervalo do auto-spawn (atual: <#6817ff>" + min + " min<#a4a4a4>)"));
+            sender.sendMessage(mm.deserialize("  <#6817ff>/pboss lifetime <minutos> <#a4a4a4>- Tempo de vida do boss (atual: <#6817ff>" + life + " min<#a4a4a4>)"));
+            sender.sendMessage(mm.deserialize("  <#6817ff>/pboss testsound <#a4a4a4>- Testa os sons custom"));
+            sender.sendMessage(mm.deserialize("  <#a4a4a4>Defina os locais com <#6817ff>/setbossarena <#a4a4a4>e <#6817ff>/setbossspawn"));
             return true;
         }
 
@@ -67,7 +67,7 @@ public class PBossCommand implements CommandExecutor, TabCompleter {
                     int min = Integer.parseInt(args[1]);
                     if (min < 1) { sender.sendMessage(mm.deserialize("<#FF0000>O intervalo deve ser de pelo menos 1 minuto.")); return true; }
                     plugin.getBossManager().setAutoSpawnMinutes(min);
-                    sender.sendMessage(mm.deserialize("<#10fc46>Boss agora nasce sozinho a cada <#fcc850>" + min + " minutos<#10fc46>."));
+                    sender.sendMessage(mm.deserialize("<#10fc46>Boss agora nasce sozinho a cada <#6817ff>" + min + " minutos<#10fc46>."));
                 } catch (NumberFormatException e) {
                     sender.sendMessage(mm.deserialize("<#FF0000>Minutos inválido: " + args[1]));
                 }
@@ -82,7 +82,7 @@ public class PBossCommand implements CommandExecutor, TabCompleter {
                     int min = Integer.parseInt(args[1]);
                     if (min < 1) { sender.sendMessage(mm.deserialize("<#FF0000>O tempo de vida deve ser de pelo menos 1 minuto.")); return true; }
                     plugin.getBossManager().setLifetimeMinutes(min);
-                    sender.sendMessage(mm.deserialize("<#10fc46>O boss agora vive por <#fcc850>" + min
+                    sender.sendMessage(mm.deserialize("<#10fc46>O boss agora vive por <#6817ff>" + min
                             + " minutos<#10fc46> antes de ir embora. <#a4a4a4>(vale a partir do próximo spawn)"));
                 } catch (NumberFormatException e) {
                     sender.sendMessage(mm.deserialize("<#FF0000>Minutos inválido: " + args[1]));
@@ -99,13 +99,13 @@ public class PBossCommand implements CommandExecutor, TabCompleter {
                 }
                 String type = args.length >= 2 ? args[1].toLowerCase() : "cavaleiro";
                 if (!type.equals("cavaleiro") && !type.equals("spooky") && !type.equals("tower")) {
-                    sender.sendMessage(mm.deserialize("<#FF0000>Tipo inválido. Use: <#fcc850>/pboss spawn <cavaleiro|spooky|tower>"));
+                    sender.sendMessage(mm.deserialize("<#FF0000>Tipo inválido. Use: <#6817ff>/pboss spawn <cavaleiro|spooky|tower>"));
                     return true;
                 }
                 plugin.getBossManager().spawn(at, type);
                 String nice = type.equals("spooky") ? "Spooky"
                         : type.equals("tower") ? "Tower Skeleton" : "Cavaleiro das Sombras";
-                sender.sendMessage(mm.deserialize("<#10fc46>Invocando boss: <#fcc850>" + nice + "<#10fc46>!"));
+                sender.sendMessage(mm.deserialize("<#10fc46>Invocando boss: <#6817ff>" + nice + "<#10fc46>!"));
             }
             case "kill" -> {
                 if (!plugin.getBossManager().isActive()) {
@@ -150,7 +150,7 @@ public class PBossCommand implements CommandExecutor, TabCompleter {
                             net.kyori.adventure.key.Key.key(k),
                             net.kyori.adventure.sound.Sound.Source.MASTER, 1f, 1f)), i * 12L);
         }
-        pl.sendMessage(mm.deserialize("<#fcc850>Tocando 4 sons custom do pack..."));
+        pl.sendMessage(mm.deserialize("<#6817ff>Tocando 4 sons custom do pack..."));
         pl.sendMessage(mm.deserialize("<#a4a4a4>Se ficou <#FF0000>MUDO<#a4a4a4>, o resourcepack aplicado NÃO tem esses sons (é o pack, não o código)."));
     }
 

@@ -35,11 +35,11 @@ public class BossArenaCommand implements CommandExecutor, TabCompleter {
         BossArenaManager am = plugin.getBossArenaManager();
         if (args.length == 0) {
             sender.sendMessage(mm.deserialize("<#efa600><bold>Arena do Boss:"));
-            sender.sendMessage(mm.deserialize("  <#fcc850>/bossarena pos1 <#a4a4a4>- canto 1 (sua posição)"));
-            sender.sendMessage(mm.deserialize("  <#fcc850>/bossarena pos2 <#a4a4a4>- canto 2 (sua posição)"));
-            sender.sendMessage(mm.deserialize("  <#fcc850>/bossarena save <#a4a4a4>- salva o estado limpo (pro regen)"));
-            sender.sendMessage(mm.deserialize("  <#fcc850>/bossarena regen <#a4a4a4>- regenera agora"));
-            sender.sendMessage(mm.deserialize("  <#fcc850>/bossarena info <#a4a4a4>- status"));
+            sender.sendMessage(mm.deserialize("  <#6817ff>/bossarena pos1 <#a4a4a4>- canto 1 (sua posição)"));
+            sender.sendMessage(mm.deserialize("  <#6817ff>/bossarena pos2 <#a4a4a4>- canto 2 (sua posição)"));
+            sender.sendMessage(mm.deserialize("  <#6817ff>/bossarena save <#a4a4a4>- salva o estado limpo (pro regen)"));
+            sender.sendMessage(mm.deserialize("  <#6817ff>/bossarena regen <#a4a4a4>- regenera agora"));
+            sender.sendMessage(mm.deserialize("  <#6817ff>/bossarena info <#a4a4a4>- status"));
             return true;
         }
 
@@ -73,8 +73,8 @@ public class BossArenaCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(mm.deserialize("<#10fc46>Regenerando a arena..."));
             }
             case "info" -> {
-                sender.sendMessage(mm.deserialize("<#cbd1d7>Arena definida: <#fcc850>" + am.isDefined()));
-                sender.sendMessage(mm.deserialize("<#cbd1d7>Snapshot salvo: <#fcc850>" + am.hasSnapshot()
+                sender.sendMessage(mm.deserialize("<#cbd1d7>Arena definida: <#6817ff>" + am.isDefined()));
+                sender.sendMessage(mm.deserialize("<#cbd1d7>Snapshot salvo: <#6817ff>" + am.hasSnapshot()
                         + " <#a4a4a4>(" + am.volume() + " blocos)"));
             }
             default -> sender.sendMessage(mm.deserialize("<#FF0000>Use /bossarena pos1|pos2|save|regen|info."));

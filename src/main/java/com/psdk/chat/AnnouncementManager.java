@@ -19,7 +19,7 @@ public class AnnouncementManager extends BukkitRunnable {
     // ============= AJUSTES DAS MENSAGENS AUTOMÁTICAS (EDITE AQUI) =============
     /** Liga/desliga TODAS as mensagens automáticas. */
     public static final boolean ENABLED = true;
-    /** Intervalo entre cada mensagem (ticks). 7200 = 6 min → com 2 mensagens, cada uma a cada ~12 min. */
+    /** Intervalo entre cada mensagem (ticks). 7200 = 6 min. */
     public static final long INTERVAL_TICKS = 6 * 60 * 20L;
     /** Liga/desliga só o lembrete de /report. */
     private static final boolean REPORT_ENABLED = true;
@@ -27,11 +27,6 @@ public class AnnouncementManager extends BukkitRunnable {
 
     private final PSDK plugin;
     private final MiniMessage mm = MiniMessage.miniMessage();
-    private int currentIndex = 0;
-
-    /** Quantidade de mensagens no ciclo (Discord + /report). */
-    private static final int MESSAGE_COUNT = 2;
-
     public AnnouncementManager(PSDK plugin) {
         this.plugin = plugin;
     }
@@ -40,24 +35,7 @@ public class AnnouncementManager extends BukkitRunnable {
     public void run() {
         if (!ENABLED) return;
         if (Bukkit.getOnlinePlayers().isEmpty()) return;
-
-        switch (currentIndex) {
-            case 0 -> sendDiscord();
-            case 1 -> sendReportReminder();
-        }
-
-        currentIndex = (currentIndex + 1) % MESSAGE_COUNT;
-    }
-
-    private void sendDiscord() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            if (!plugin.getSettingsManager().getSetting(player.getUniqueId(), "announcements")) continue;
-            player.sendMessage(mm.deserialize(""));
-            player.sendMessage(mm.deserialize("   <#626CFF><bold>Discord do Skill Pit!"));
-            player.sendMessage(mm.deserialize("<reset>"));
-            player.sendMessage(mm.deserialize("<font:nexo:default></font><hover:show_text:'<#626CFF>Clique para entrar no Discord!'><click:open_url:'https://discord.gg/suitemc'><#626CFF>discord.gg/suitemc</click></hover><reset>"));
-            player.sendMessage(mm.deserialize(""));
-        }
+        sendReportReminder();
     }
 
     private void sendReportReminder() {

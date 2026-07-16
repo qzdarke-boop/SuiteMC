@@ -133,15 +133,15 @@ public class BossArenaManager implements Listener {
         if (!defined) { msg(requester, "<#FF0000>Defina os 2 cantos primeiro (/bossarena pos1 e pos2)."); return; }
         final long volume = volume();
         if (volume > MAX_VOLUME) {
-            msg(requester, "<#FF0000>Arena grande demais: <#fcc850>" + String.format("%,d", volume)
-                    + " <#FF0000>blocos (max <#fcc850>" + String.format("%,d", MAX_VOLUME) + "<#FF0000>).");
+            msg(requester, "<#FF0000>Arena grande demais: <#6817ff>" + String.format("%,d", volume)
+                    + " <#FF0000>blocos (max <#6817ff>" + String.format("%,d", MAX_VOLUME) + "<#FF0000>).");
             return;
         }
 
         saving = true;
         final World w = world;
         final int aMinX = minX, aMinY = minY, aMinZ = minZ, aMaxX = maxX, aMaxY = maxY, aMaxZ = maxZ;
-        msg(requester, "<#fcc850>Salvando a arena do boss (" + String.format("%,d", volume) + " blocos)...");
+        msg(requester, "<#6817ff>Salvando a arena do boss (" + String.format("%,d", volume) + " blocos)...");
 
         final LinkedBlockingQueue<BlockRow> queue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
         final AtomicBoolean scanDone = new AtomicBoolean(false);
@@ -183,7 +183,7 @@ public class BossArenaManager implements Listener {
                 blocksInDb = total;
                 saving = false;
                 placedBlocks.clear(); // o estado salvo passa a ser a "estrutura original"
-                msg(requester, "<#10fc46>Arena do boss salva! <#fcc850>" + String.format("%,d", total) + " <#10fc46>blocos no SQLite.");
+                msg(requester, "<#10fc46>Arena do boss salva! <#6817ff>" + String.format("%,d", total) + " <#10fc46>blocos no SQLite.");
             });
         });
 
@@ -277,7 +277,7 @@ public class BossArenaManager implements Listener {
                 minutesUntilRegen--;
                 if (minutesUntilRegen == AVISO_MINUTOS) {
                     plugin.getServer().sendMessage(MM.deserialize(" "));
-                    plugin.getServer().sendMessage(MM.deserialize("<#e22c27>A arena vai reiniciar daqui <#fcc850>" + AVISO_MINUTOS + " minutos<#e22c27>! Cuidado!"));
+                    plugin.getServer().sendMessage(MM.deserialize("<#e22c27>A arena vai reiniciar daqui <#6817ff>" + AVISO_MINUTOS + " minutos<#e22c27>! Cuidado!"));
                     plugin.getServer().sendMessage(MM.deserialize(" "));
                 }
                 if (minutesUntilRegen <= 0) {

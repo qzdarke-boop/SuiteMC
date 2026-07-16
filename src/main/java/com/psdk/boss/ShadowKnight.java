@@ -283,7 +283,7 @@ public class ShadowKnight implements BossEntity {
         base.getWorld().playSound(base.getLocation(), Sound.ENTITY_RAVAGER_AMBIENT, 1.2f, 0.5f);
         base.getWorld().playSound(base.getLocation(), Sound.ENTITY_WARDEN_AMBIENT, 1.0f, 0.6f);
         for (Player p : nearbyPlayers(BOSSBAR_RANGE))
-            p.sendMessage(MM.deserialize("<#fcc850>O " + NAME_PLAIN + " <#a4a4a4>está EXAUSTO — aproveitem a janela!"));
+            p.sendMessage(MM.deserialize("<#6817ff>O " + NAME_PLAIN + " <#a4a4a4>está EXAUSTO — aproveitem a janela!"));
     }
 
     private void tiredEffects() {

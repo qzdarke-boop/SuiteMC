@@ -40,7 +40,7 @@ public class BossCommand implements CommandExecutor {
         if (!plugin.getBossManager().isActive()) {
             long next = plugin.getBossManager().getNextAutoSpawnMillis();
             long remaining = next - System.currentTimeMillis();
-            player.sendMessage(mm.deserialize("<#fcc850>Não há nenhum boss vivo no momento."));
+            player.sendMessage(mm.deserialize("<#6817ff>Não há nenhum boss vivo no momento."));
             if (remaining > 0) {
                 player.sendMessage(mm.deserialize("<#a4a4a4>Próximo boss automático em: <#10fc46>" + formatDuration(remaining)));
             } else {
@@ -73,7 +73,7 @@ public class BossCommand implements CommandExecutor {
 
     private void startTeleport(Player player, CombatManager cm) {
         final Location startPos = player.getLocation().clone();
-        player.sendActionBar(mm.deserialize("<#fcc850>Teleportando em <#dea114><bold>3</bold>s"));
+        player.sendActionBar(mm.deserialize("<#6817ff>Teleportando em <#5012cc><bold>3</bold>s"));
         player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, 1.0f);
 
         new BukkitRunnable() {
@@ -101,7 +101,7 @@ public class BossCommand implements CommandExecutor {
                     player.sendActionBar(mm.deserialize("<#10fc46>Você foi levado para a arena do boss!"));
                     cancel(); return;
                 }
-                player.sendActionBar(mm.deserialize("<#fcc850>Teleportando em <#dea114><bold>" + seconds + "</bold>s"));
+                player.sendActionBar(mm.deserialize("<#6817ff>Teleportando em <#5012cc><bold>" + seconds + "</bold>s"));
                 player.playSound(player.getLocation(), Sound.ENTITY_ARROW_SHOOT, 1.0f, 1.0f);
                 seconds--;
             }

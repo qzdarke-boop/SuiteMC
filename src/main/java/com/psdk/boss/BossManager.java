@@ -139,7 +139,7 @@ public class BossManager implements Listener {
             lastHourlyAnnounce = now;
             var s = plugin.getServer();
             s.sendMessage(MM.deserialize(" "));
-            s.sendMessage(MM.deserialize("<#cbd1d7>O Boss nascerá novamente em <#fcc850>"
+            s.sendMessage(MM.deserialize("<#cbd1d7>O Boss nascerá novamente em <#6817ff>"
                     + formatDuration(remaining) + "<#cbd1d7>!"));
             s.sendMessage(MM.deserialize(" "));
         }
@@ -171,7 +171,7 @@ public class BossManager implements Listener {
             if (pct <= t && announcedThresholds.add(t)) {
                 var s = plugin.getServer();
                 s.sendMessage(MM.deserialize("<#e22c27><bold>" + active.getNamePlain()
-                        + "</bold> <#cbd1d7>está com <#fcc850>" + t + "%<#cbd1d7> de vida! Ajude a derrotá-lo!"));
+                        + "</bold> <#cbd1d7>está com <#6817ff>" + t + "%<#cbd1d7> de vida! Ajude a derrotá-lo!"));
             }
         }
     }
@@ -455,9 +455,9 @@ public class BossManager implements Listener {
                     .sorted((a, b) -> Double.compare(b.getValue(), a.getValue()))
                     .limit(5)
                     .collect(Collectors.toList());
-            final String[] cor = {"#fcc850", "#cbd1d7", "#fc9d1a", "#b1fcb6", "#71b0ec"};
+            final String[] cor = {"#6817ff", "#cbd1d7", "#fc9d1a", "#b1fcb6", "#71b0ec"};
             s.sendMessage(MM.deserialize("<#e22c27><bold>" + name + "</bold> <#cbd1d7>resistiu e fugiu antes de ser derrotado!"));
-            s.sendMessage(MM.deserialize("<#848c94>Quem mais causou dano leva uma recompensa <#fcc850>reduzida<#848c94>:"));
+            s.sendMessage(MM.deserialize("<#848c94>Quem mais causou dano leva uma recompensa <#6817ff>reduzida<#848c94>:"));
             for (int i = 0; i < ranked.size(); i++) {
                 Map.Entry<UUID, Double> e = ranked.get(i);
                 String pn = names.getOrDefault(e.getKey(), "?");
@@ -524,12 +524,12 @@ public class BossManager implements Listener {
                 .limit(5)
                 .collect(Collectors.toList());
 
-        final String[] cor = {"#fcc850", "#cbd1d7", "#fc9d1a", "#b1fcb6", "#71b0ec"};
+        final String[] cor = {"#6817ff", "#cbd1d7", "#fc9d1a", "#b1fcb6", "#71b0ec"};
 
         var s = plugin.getServer();
         s.sendMessage(MM.deserialize(" "));
         s.sendMessage(MM.deserialize("<gradient:#e22c27:#fc564c><bold>" + boss.getNamePlain() + "</bold></gradient> <#10fc46>foi derrotado!"));
-        s.sendMessage(MM.deserialize("<#cbd1d7>Recompensas dos <#fcc850>TOP 5 <#cbd1d7>em dano:"));
+        s.sendMessage(MM.deserialize("<#cbd1d7>Recompensas dos <#6817ff>TOP 5 <#cbd1d7>em dano:"));
         for (int i = 0; i < ranked.size(); i++) {
             Map.Entry<UUID, Double> e = ranked.get(i);
             String name = names.getOrDefault(e.getKey(), "?");
