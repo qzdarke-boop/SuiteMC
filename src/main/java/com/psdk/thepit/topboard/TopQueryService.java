@@ -122,7 +122,8 @@ public class TopQueryService {
         if (period == TopPeriod.GLOBAL) {
             return switch (type) {
                 case KILLS -> buildTopSql("player_data", "kills");
-                case COINS -> buildTopSql("player_economy", "coins");
+                // Top Coins = coins CONQUISTADOS por gameplay (não o saldo movido por /pay, /eco).
+                case COINS -> buildTopSql("player_economy", "coins_earned");
                 case HOURS -> buildTopSql("player_data", "total_playtime_ms");
                 case DEATHS -> buildTopSql("player_data", "deaths");
                 case LEVEL -> buildTopSql("player_data", "level");

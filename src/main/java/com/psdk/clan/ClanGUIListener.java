@@ -818,7 +818,8 @@ public class ClanGUIListener implements Listener {
                 ClanGUI.openMarketGUI(player, clan);
                 return;
             }
-            plugin.getEconomyManager().addCoins(mi.seller(), mi.sellerName(), price);
+            // Venda no mercado do clã = transferência entre jogadores: não conta no Top Coins.
+            plugin.getEconomyManager().addCoinsNoStat(mi.seller(), mi.sellerName(), price);
             ItemStack bought = ClanGUI.deserializeItem(mi.itemData());
             if (bought != null) giveOrDrop(player, bought);
             player.sendMessage(mm.deserialize("<#10fc46>Item comprado por <#fcc850>" + String.format("%.0f", price) + " coins<#10fc46>!"));

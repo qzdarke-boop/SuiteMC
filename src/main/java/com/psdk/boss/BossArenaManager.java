@@ -257,6 +257,13 @@ public class BossArenaManager implements Listener {
                 int sinceCheck = 0;
                 ParsedBlock row;
                 while ((row = queue.poll()) != null) {
+                    // Jaula ativa: o reset do Boss também preserva vidro/interior e atualiza
+                    // a restauração pendente (não remove nem encerra Jaulas — ver CageManager).
+                    if (plugin.getCageManager().shouldPreserveDuringReset(
+                            w, row.x(), row.y(), row.z(), row.data())) {
+                        if ((++sinceCheck & 1023) == 0 && System.nanoTime() >= deadline) break;
+                        continue;
+                    }
                     Block b = w.getBlockAt(row.x(), row.y(), row.z());
                     if (!b.getBlockData().equals(row.data())) b.setBlockData(row.data(), false); // sem física
                     if ((++sinceCheck & 1023) == 0 && System.nanoTime() >= deadline) break;
@@ -265,6 +272,8 @@ public class BossArenaManager implements Listener {
                     cancel();
                     resetting = false;
                     placedBlocks.clear(); // arena restaurada -> não há mais blocos de jogador
+                    // Re-persiste as Jaulas cujo estado de restauração mudou durante o reset.
+                    plugin.getCageManager().finishResetTouched();
                 }
             }
         }.runTaskTimer(plugin, 0L, 1L);

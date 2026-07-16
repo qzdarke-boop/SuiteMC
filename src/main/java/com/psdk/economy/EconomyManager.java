@@ -25,9 +25,16 @@ public class EconomyManager {
     private volatile List<TopEntry> topKillsCache = List.of();
     private volatile List<TopEntry> topDeathsCache = List.of();
 
-    /** Cache de saldo em memória [tokens, coins] — evita SELECT no banco a cada leitura. */
+    /**
+     * Cache de saldo em memória [tokens, coins, coins_earned] — evita SELECT no banco a
+     * cada leitura. {@code coins_earned} é o total CONQUISTADO por gameplay (base do Top
+     * Coins); só sobe via {@link #addCoins} (fontes reais), nunca por /pay ou /eco.
+     */
     private final Map<UUID, double[]> balances = new ConcurrentHashMap<>();
     private final Set<UUID> balanceWarming = ConcurrentHashMap.newKeySet();
+
+    /** Índice do total conquistado no array de saldo (tokens=0, coins=1, coins_earned=2). */
+    private static final int EARNED_IDX = 2;
 
     /**
      * Write-behind: o cache acima é a FONTE DA VERDADE em runtime. As operações
@@ -40,14 +47,44 @@ public class EconomyManager {
     private final Object flushLock = new Object();
 
     private static final String FLUSH_SQL =
-            "INSERT INTO player_economy (uuid, name, tokens, coins) VALUES (?, ?, ?, ?) " +
+            "INSERT INTO player_economy (uuid, name, tokens, coins, coins_earned) VALUES (?, ?, ?, ?, ?) " +
             "ON CONFLICT(uuid) DO UPDATE SET tokens = excluded.tokens, coins = excluded.coins, " +
-            "name = COALESCE(excluded.name, player_economy.name)";
+            "coins_earned = excluded.coins_earned, name = COALESCE(excluded.name, player_economy.name)";
 
     public EconomyManager(PSDK plugin) {
         this.plugin = plugin;
+        migrateEarnedFromBalance();
         startTopCacheTask();
         startFlushTask();
+    }
+
+    /**
+     * Migração única: semeia {@code coins_earned} com o saldo atual (uma vez), para que o
+     * Top Coins não fique vazio logo após a atualização. A partir daí só a gameplay soma.
+     * O saldo NÃO é alterado. Guardada por flag em {@code settings} (roda só uma vez).
+     */
+    private void migrateEarnedFromBalance() {
+        try {
+            Connection conn = plugin.getDatabaseManager().getConnection();
+            String flag = null;
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT value FROM settings WHERE key = 'coins_earned_migrated'");
+                 ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) flag = rs.getString("value");
+            }
+            if ("1".equals(flag)) return;
+            try (Statement st = conn.createStatement()) {
+                st.executeUpdate("UPDATE player_economy SET coins_earned = coins WHERE coins_earned = 0 AND coins > 0");
+            }
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "INSERT INTO settings (key, value) VALUES ('coins_earned_migrated', '1') " +
+                    "ON CONFLICT(key) DO UPDATE SET value = '1'")) {
+                ps.executeUpdate();
+            }
+            plugin.getLogger().info("[Economia] coins_earned inicializado a partir do saldo atual (migração única).");
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.WARNING, "Erro na migração de coins_earned", e);
+        }
     }
 
     private void startFlushTask() {
@@ -70,7 +107,8 @@ public class EconomyManager {
         // a conexão da thread principal (evita corrupção de leitura/escrita).
         try (Connection conn = plugin.getDatabaseManager().newConnection()) {
             topTokensCache = queryTop(conn, "SELECT name, tokens AS value FROM player_economy ORDER BY tokens DESC LIMIT 10");
-            topCoinsCache = queryTop(conn, "SELECT name, coins AS value FROM player_economy ORDER BY coins DESC LIMIT 10");
+            // Top Coins = coins CONQUISTADOS por gameplay (não o saldo, que /pay e /eco movem).
+            topCoinsCache = queryTop(conn, "SELECT name, coins_earned AS value FROM player_economy ORDER BY coins_earned DESC LIMIT 10");
             topKillsCache = queryTop(conn, "SELECT name, kills AS value FROM player_data ORDER BY kills DESC LIMIT 10");
             topDeathsCache = queryTop(conn, "SELECT name, deaths AS value FROM player_data ORDER BY deaths DESC LIMIT 10");
         } catch (SQLException e) {
@@ -102,7 +140,7 @@ public class EconomyManager {
     }
 
     public void addTokens(UUID uuid, String name, double amount) {
-        addCurrency(uuid, name, Currency.TOKENS, amount);
+        addCurrency(uuid, name, Currency.TOKENS, amount, false);
     }
 
     public boolean removeTokens(UUID uuid, double amount) {
@@ -123,8 +161,21 @@ public class EconomyManager {
         setCurrency(uuid, name, Currency.COINS, amount);
     }
 
+    /**
+     * Adiciona coins por uma fonte de GAMEPLAY (mineração, kills, Boss, eventos...).
+     * Soma ao saldo E ao total conquistado (Top Coins) e às estatísticas de período.
+     */
     public void addCoins(UUID uuid, String name, double amount) {
-        addCurrency(uuid, name, Currency.COINS, amount);
+        addCurrency(uuid, name, Currency.COINS, amount, true);
+    }
+
+    /**
+     * Adiciona coins SEM contar para o Top Coins nem para os stats de período. Use para
+     * transferências e ajustes administrativos (/pay recebido, /eco give) — apenas o saldo
+     * muda. Isso impede a falsificação do ranking movimentando coins já existentes.
+     */
+    public void addCoinsNoStat(UUID uuid, String name, double amount) {
+        addCurrency(uuid, name, Currency.COINS, amount, false);
     }
 
     public boolean removeCoins(UUID uuid, double amount) {
@@ -135,16 +186,31 @@ public class EconomyManager {
         return getCoins(uuid) >= amount;
     }
 
+    /** Total de coins conquistados por gameplay (base do Top Coins). */
+    public double getCoinsEarned(UUID uuid) {
+        double[] b = balances.get(uuid);
+        if (b == null) {
+            if (!Bukkit.isPrimaryThread()) { warmBalance(uuid); return 0; }
+            b = loadFromDb(uuid);
+            balances.put(uuid, b);
+        }
+        return b[EARNED_IDX];
+    }
+
     // ==================== Generic helpers ====================
 
-    /** Carrega [tokens, coins] do banco (1 query). Usado só no primeiro acesso de cada jogador. */
+    /** Carrega [tokens, coins, coins_earned] do banco (1 query). Só no primeiro acesso de cada jogador. */
     private double[] loadFromDb(UUID uuid) {
-        double[] b = {0, 0};
+        double[] b = {0, 0, 0};
         try (PreparedStatement ps = plugin.getDatabaseManager().getConnection()
-                .prepareStatement("SELECT tokens, coins FROM player_economy WHERE uuid = ?")) {
+                .prepareStatement("SELECT tokens, coins, coins_earned FROM player_economy WHERE uuid = ?")) {
             ps.setString(1, uuid.toString());
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) { b[0] = rs.getDouble("tokens"); b[1] = rs.getDouble("coins"); }
+                if (rs.next()) {
+                    b[0] = rs.getDouble("tokens");
+                    b[1] = rs.getDouble("coins");
+                    b[EARNED_IDX] = rs.getDouble("coins_earned");
+                }
             }
         } catch (SQLException e) {
             plugin.getLogger().log(Level.WARNING, "Erro ao carregar saldo", e);
@@ -188,12 +254,18 @@ public class EconomyManager {
         markDirty(uuid);
     }
 
-    private void addCurrency(UUID uuid, String name, Currency currency, double amount) {
+    /**
+     * @param countEarned quando {@code true} (e a moeda é COINS), soma também ao total
+     *        conquistado (Top Coins) e às estatísticas de período. Transferências/ajustes
+     *        (/pay, /eco) passam {@code false}: mexem só no saldo, nunca no ranking.
+     */
+    private void addCurrency(UUID uuid, String name, Currency currency, double amount, boolean countEarned) {
         if (!Double.isFinite(amount) || amount <= 0) return;  // só adiciona valores finitos e positivos
         double[] b = balances.computeIfAbsent(uuid, k -> loadFromDb(uuid));
         b[currency.idx] += amount;
         if (name != null) nameCache.put(uuid, name);
-        if (currency == Currency.COINS) {
+        if (currency == Currency.COINS && countEarned) {
+            b[EARNED_IDX] += amount;                          // total conquistado (Top Coins)
             plugin.getTopStatsTracker().addCoins(uuid, name, amount);
         }
         markDirty(uuid);
@@ -236,6 +308,7 @@ public class EconomyManager {
                         ps.setString(2, nameCache.get(id)); // null -> COALESCE preserva o nome atual
                         ps.setDouble(3, b[0]);
                         ps.setDouble(4, b[1]);
+                        ps.setDouble(5, b.length > EARNED_IDX ? b[EARNED_IDX] : 0);
                         ps.addBatch();
                     }
                     ps.executeBatch();
@@ -267,7 +340,7 @@ public class EconomyManager {
     public void ensureAccount(UUID uuid, String name) {
         if (name != null) nameCache.put(uuid, name);
         String sql = """
-                INSERT INTO player_economy (uuid, name, tokens, coins) VALUES (?, ?, 0, 0)
+                INSERT INTO player_economy (uuid, name, tokens, coins, coins_earned) VALUES (?, ?, 0, 0, 0)
                 ON CONFLICT(uuid) DO UPDATE SET name = excluded.name""";
         try (PreparedStatement ps = plugin.getDatabaseManager().getConnection().prepareStatement(sql)) {
             ps.setString(1, uuid.toString());

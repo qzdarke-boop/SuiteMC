@@ -82,6 +82,9 @@ public class CageManager {
     private final Map<UUID, Long> outsideMsgCooldown = new HashMap<>();
     // Timer de duração máxima por Jaula (cada instância tem o seu, independente).
     private final Map<UUID, org.bukkit.scheduler.BukkitTask> durationTasks = new HashMap<>();
+    // Jaulas cujo estado de restauração foi atualizado durante um reset em andamento
+    // (re-persistidas em lote ao fim do reset, ver finishResetTouched()).
+    private final Set<UUID> resetTouched = ConcurrentHashMap.newKeySet();
 
     public CageManager(PSDK plugin) {
         this.plugin = plugin;
@@ -366,6 +369,65 @@ public class CageManager {
 
     public boolean isInsideCage(Location loc) {
         return getCageAt(loc) != null;
+    }
+
+    // ─────────────── Integração com o RESET da arena (proteção de Jaulas) ───────
+    // Chamado pelos resets (arena principal e arena do Boss) para CADA bloco do snapshot
+    // ANTES de aplicá-lo. Se a coordenada pertence a uma Jaula ativa, o reset é PULADO
+    // para aquele bloco (o vidro/interior é preservado) e — no caso da casca — o estado de
+    // restauração pendente é atualizado para o bloco correto pós-reset, de modo que ao
+    // destruir a Jaula ela restaure o terreno atualizado (sem desfazer o reset).
+    //
+    // Caminho rápido: quando não há nenhuma Jaula ativa (o normal), retorna false na hora,
+    // sem custo perceptível no reset.
+
+    /**
+     * @return {@code true} se o reset deve PULAR este bloco (pertence a uma Jaula ativa);
+     *         {@code false} se o reset pode aplicá-lo normalmente.
+     */
+    public boolean shouldPreserveDuringReset(World world, int x, int y, int z, BlockData snapshotData) {
+        if (cages.isEmpty()) return false;                 // caminho rápido: sem Jaulas ativas
+        String wName = world.getName();
+
+        // 1) Bloco da casca (vidro): mantém o vidro e atualiza a restauração pendente.
+        Map<Long, UUID> bi = blockIndex.get(wName);
+        if (bi != null && !bi.isEmpty()) {
+            UUID id = bi.get(packBlock(x, y, z));
+            if (id != null) {
+                Cage cage = cages.get(id);
+                if (cage != null && cage.isActive()) {
+                    if (snapshotData != null
+                            && cage.updateRestoreState(x, y, z, snapshotData.getAsString())) {
+                        resetTouched.add(cage.getId());
+                    }
+                    return true;
+                }
+            }
+        }
+
+        // 2) Interior oco de uma Jaula ativa: não deixa o reset preencher (evita sufocar
+        //    os presos e manter a estrutura "fechada"). Poucas Jaulas ativas → laço barato.
+        for (Cage c : cages.values()) {
+            if (c.isActive() && c.getWorld().equals(wName) && c.isInsideInterior(x, y, z)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Re-persiste as Jaulas cujo estado de restauração foi atualizado durante o reset,
+     * para que a recuperação em crash reflita o terreno pós-reset. Chamado ao FIM do reset.
+     * Idempotente e best-effort.
+     */
+    public void finishResetTouched() {
+        if (resetTouched.isEmpty()) return;
+        List<UUID> ids = new ArrayList<>(resetTouched);
+        resetTouched.clear();
+        for (UUID id : ids) {
+            Cage cage = cages.get(id);
+            if (cage != null && cage.isActive()) persist(cage);
+        }
     }
 
     /**

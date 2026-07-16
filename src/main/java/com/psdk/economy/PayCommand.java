@@ -99,7 +99,9 @@ public class PayCommand implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (coins) eco.addCoins(target.getUniqueId(), target.getName(), amount);
+        // Transferência entre jogadores: só move o SALDO. NÃO conta para o Top Coins
+        // (addCoinsNoStat), impedindo inflar o ranking com /pay de ida e volta.
+        if (coins) eco.addCoinsNoStat(target.getUniqueId(), target.getName(), amount);
         else       eco.addTokens(target.getUniqueId(), target.getName(), amount);
 
         payer.sendMessage(mm.deserialize("<#10fc46>Você enviou <#fcc850>" + valor + " " + moedaNome

@@ -514,7 +514,7 @@ public class ClanManager {
             conn = plugin.getDatabaseManager().getConnection();
             conn.setAutoCommit(false);
         } catch (SQLException e) {
-            eco.addCoins(player, playerName, amount);
+            eco.addCoinsNoStat(player, playerName, amount); // devolução: não conta no Top Coins
             plugin.getLogger().log(Level.WARNING, "Erro ao depositar no tesouro", e);
             return false;
         }
@@ -531,7 +531,7 @@ public class ClanManager {
             return true;
         } catch (SQLException e) {
             try { conn.rollback(); } catch (SQLException ignored) {}
-            eco.addCoins(player, playerName, amount); // desfaz o débito do cache
+            eco.addCoinsNoStat(player, playerName, amount); // desfaz o débito do cache (não conta no Top Coins)
             plugin.getLogger().log(Level.WARNING, "Erro ao depositar no tesouro", e);
             return false;
         } finally {
@@ -547,7 +547,7 @@ public class ClanManager {
     public boolean withdrawFromTreasury(int clanId, UUID player, String playerName, double amount) {
         if (!Double.isFinite(amount) || amount <= 0) return false;
         var eco = plugin.getEconomyManager();
-        eco.addCoins(player, playerName, amount); // crédito no cache; desfeito se a transação falhar
+        eco.addCoinsNoStat(player, playerName, amount); // saque do tesouro: movimentação, não conta no Top Coins
 
         Connection conn;
         try {

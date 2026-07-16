@@ -204,7 +204,7 @@ public class ThePitCommand implements CommandExecutor, TabCompleter {
         //    assíncrono poderia regravar saldos antigos por cima do reset.
         plugin.getEconomyManager().clearCache();
         try (Statement stmt = plugin.getDatabaseManager().getConnection().createStatement()) {
-            stmt.executeUpdate("UPDATE player_economy SET coins = 0, tokens = 0");
+            stmt.executeUpdate("UPDATE player_economy SET coins = 0, tokens = 0, coins_earned = 0");
             stmt.executeUpdate("UPDATE player_data SET kills = 0, deaths = 0, level = 1, xp = 0");
         } catch (Exception e) {
             sender.sendMessage(mm.deserialize("<#FF0000>Erro ao resetar: " + e.getMessage()));

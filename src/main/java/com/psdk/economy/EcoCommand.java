@@ -52,7 +52,8 @@ public class EcoCommand implements CommandExecutor, TabCompleter {
 
         switch (args[0].toLowerCase()) {
             case "givecoins" -> {
-                eco.addCoins(target.getUniqueId(), target.getName(), amount);
+                // Ajuste administrativo: muda só o SALDO, NÃO conta para o Top Coins.
+                eco.addCoinsNoStat(target.getUniqueId(), target.getName(), amount);
                 double bal = eco.getCoins(target.getUniqueId());
                 sender.sendMessage(mm.deserialize("<#10fc46>+" + fmt(amount) +
                         " coins para <#fcc850>" + target.getName() + "<#10fc46>. Saldo: <#efa600>" + fmt(bal)));

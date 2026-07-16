@@ -83,7 +83,8 @@ public class BountyGUIListener implements Listener {
         boolean ok = plugin.getBountyManager().addBounty(gui.getTarget(), gui.getTargetName(), amount);
         if (!ok) {
             // Persistência falhou: devolve os coins debitados para não haver perda.
-            plugin.getEconomyManager().addCoins(player.getUniqueId(), player.getName(), amount);
+            // Devolução: não conta para o Top Coins.
+            plugin.getEconomyManager().addCoinsNoStat(player.getUniqueId(), player.getName(), amount);
             player.closeInventory();
             player.sendMessage(mm.deserialize("<#FF0000>Erro ao registrar a recompensa. Seus coins foram devolvidos."));
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 0.7f, 1.0f);

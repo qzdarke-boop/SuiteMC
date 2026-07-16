@@ -1,5 +1,5 @@
 name: PSDK
-version: '1.0.29'
+version: '1.0.30'
 main: com.psdk.PSDK
 api-version: '1.21'
 description: Paper Server Development Kit

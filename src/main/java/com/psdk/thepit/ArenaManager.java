@@ -344,6 +344,13 @@ public class ArenaManager {
                 int sinceTimeCheck = 0;
                 ParsedBlock row;
                 while ((row = queue.poll()) != null) {
+                    // Jaula ativa: preserva vidro/interior e atualiza a restauração pendente
+                    // (o reset NÃO remove nem altera Jaulas — ver CageManager).
+                    if (plugin.getCageManager().shouldPreserveDuringReset(
+                            world, row.x(), row.y(), row.z(), row.data())) {
+                        if ((++sinceTimeCheck & 1023) == 0 && System.nanoTime() >= deadline) break;
+                        continue;
+                    }
                     Block block = world.getBlockAt(row.x(), row.y(), row.z());
                     if (!block.getBlockData().equals(row.data())) {
                         block.setBlockData(row.data(), false); // sem física
@@ -357,6 +364,8 @@ public class ArenaManager {
                     // A arena voltou ao snapshot: blocos colocados por jogadores já
                     // foram removidos, então esquecemos o rastreio deles.
                     placedBlocks.clear();
+                    // Re-persiste as Jaulas cujo estado de restauração mudou durante o reset.
+                    plugin.getCageManager().finishResetTouched();
                     if (onComplete != null) onComplete.run();
                 }
             }

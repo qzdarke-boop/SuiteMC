@@ -85,10 +85,13 @@ CREATE TABLE IF NOT EXISTS boss_arena_blocks (
 );
 
 CREATE TABLE IF NOT EXISTS player_economy (
-    uuid   TEXT PRIMARY KEY NOT NULL,
-    name   TEXT NOT NULL DEFAULT '',
-    tokens REAL NOT NULL DEFAULT 0,
-    coins  REAL NOT NULL DEFAULT 0
+    uuid         TEXT PRIMARY KEY NOT NULL,
+    name         TEXT NOT NULL DEFAULT '',
+    tokens       REAL NOT NULL DEFAULT 0,
+    coins        REAL NOT NULL DEFAULT 0,
+    -- Total de coins CONQUISTADOS por gameplay (mineração, kills, Boss, eventos...).
+    -- Base do Top Coins. NÃO é alterado por /pay nem /eco (só o saldo 'coins' muda).
+    coins_earned REAL NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS thepit_kit_loot (
