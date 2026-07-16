@@ -562,34 +562,32 @@ public class CageManager {
     /**
      * Solta de fato um jogador da Jaula recém-encerrada:
      * <ul>
-     *   <li>Ressincroniza os blocos restaurados para o cliente (evita ficar preso na
-     *       colisão-fantasma dos vidros que já sumiram — causa do bug ao expirar o tempo
-     *       com o jogador parado);</li>
-     *   <li>Garante uma posição segura (usa a atual se já for; senão o antigo interior;
-     *       spawn como fallback final);</li>
-     *   <li>Reconfere no tick seguinte para não sobrar dessincronização.</li>
+     *   <li>Ressincroniza os blocos restaurados para o cliente;</li>
+     *   <li><b>SEMPRE</b> reposiciona o jogador (teleporte real) para uma posição segura.
+     *       Esse teleporte é o que de fato "solta" a colisão-fantasma dos vidros que já
+     *       sumiram — era a causa de o jogador parado ficar preso no 8x8 quando a Jaula
+     *       expirava por tempo (parado, o cliente não reavaliava a colisão sozinho).
+     *       Só reenviar o bloco não bastava; o teleporte força o resync completo;</li>
+     *   <li>Reconfere no tick seguinte para não sobrar dessincronização (spawn como
+     *       último recurso).</li>
      * </ul>
      */
     private void releasePlayer(Player p, Cage cage, List<Block> restored) {
-        // Ressincroniza os vidros que voltaram a ser o bloco original (mata a colisão-fantasma).
+        // Ressincroniza os vidros que voltaram a ser o bloco original (reforço visual).
         for (Block b : restored) {
             try { p.sendBlockChange(b.getLocation(), b.getBlockData()); } catch (Throwable ignored) { }
         }
 
-        // Se a posição atual não for segura, move para uma coluna livre do antigo interior.
-        if (safeStandingOrNull(p.getLocation()) == null) {
-            Location safe = findSafeInterior(p.getWorld(),
-                    cage.getMinX(), cage.getMinY(), cage.getMinZ(),
-                    cage.getMaxX(), cage.getMaxY(), cage.getMaxZ(),
-                    p.getLocation().getBlockX(), p.getLocation().getBlockZ(), p.getLocation());
-            if (safe == null) safe = plugin.getSpawnLocation();
-            if (safe != null) p.teleport(safe);
-        }
+        // Alvo seguro: posição ATUAL (centralizada no bloco) se já for segura — assim o
+        // jogador quase não se move, mas o teleporte ainda força o resync; senão, uma
+        // coluna livre do antigo interior; spawn como fallback final.
+        Location target = safeReleaseTarget(p, cage);
+        if (target != null) p.teleport(target);
 
-        // Verificação final no tick seguinte: se ainda estiver preso/dessincronizado, corrige.
+        // Verificação no tick seguinte: se ainda estiver preso/dessincronizado, corrige.
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (!p.isOnline()) return;
-            if (safeStandingOrNull(p.getLocation()) != null) return; // ok, livre
+            if (safeStandingOrNull(p.getLocation()) != null) return; // já está livre
             Location retry = findSafeInterior(p.getWorld(),
                     cage.getMinX(), cage.getMinY(), cage.getMinZ(),
                     cage.getMaxX(), cage.getMaxY(), cage.getMaxZ(),
@@ -597,6 +595,25 @@ public class CageManager {
             if (retry == null) retry = plugin.getSpawnLocation();
             if (retry != null) p.teleport(retry);
         });
+    }
+
+    /**
+     * Destino do teleporte de libertação. Se a posição atual já é segura, usa-a
+     * centralizada no bloco (movimento mínimo, mas garante um teleporte de verdade →
+     * resync). Caso contrário, procura o interior antigo; por fim, o spawn.
+     */
+    private Location safeReleaseTarget(Player p, Cage cage) {
+        Location cur = p.getLocation();
+        if (safeStandingOrNull(cur) != null) {
+            return new Location(cur.getWorld(),
+                    cur.getBlockX() + 0.5, cur.getY(), cur.getBlockZ() + 0.5,
+                    cur.getYaw(), cur.getPitch());
+        }
+        Location interior = findSafeInterior(p.getWorld(),
+                cage.getMinX(), cage.getMinY(), cage.getMinZ(),
+                cage.getMaxX(), cage.getMaxY(), cage.getMaxZ(),
+                cur.getBlockX(), cur.getBlockZ(), cur);
+        return interior != null ? interior : plugin.getSpawnLocation();
     }
 
     /** A própria localização se pés e cabeça estiverem livres (não sufoca); senão {@code null}. */
