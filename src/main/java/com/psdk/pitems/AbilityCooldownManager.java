@@ -1,6 +1,7 @@
 package com.psdk.pitems;
 
 import com.psdk.PSDK;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
@@ -135,6 +136,15 @@ public class AbilityCooldownManager {
         if (!player.isOnline()) return;
         int ticks = (int) Math.max(0, durationMs / 50L);
         player.setCooldown(ability.getMaterial(), ticks);
+
+        // Reaplica no PRÓXIMO tick para SOBRESCREVER cooldowns vanilla que o servidor
+        // aplica DEPOIS do evento de lançamento. Ex.: a Ender Pearl seta ~1s (20 ticks)
+        // de cooldown vanilla logo após o arremesso — isso engolia o nosso setCooldown
+        // imediato e só aparecia o cooldown "padrão" curto em vez dos 6s. Itens sem
+        // cooldown vanilla (TNT/Ovo/Jaula) não são afetados por essa reaplicação.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (player.isOnline()) player.setCooldown(ability.getMaterial(), ticks);
+        });
     }
 
     // ─────────────────────── Ciclo de vida / persistência ─────────────────────
