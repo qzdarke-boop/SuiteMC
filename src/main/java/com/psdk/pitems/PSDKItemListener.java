@@ -209,8 +209,20 @@ public class PSDKItemListener implements Listener {
             return;
         }
 
+        // Cooldown individual (padrão visual do Escudo). Em recarga: NÃO lança nem consome.
+        // isReady() já concede bypass a OP (só o tempo; região/arena seguem valendo).
+        AbilityCooldownManager cd = plugin.getAbilityCooldownManager();
+        if (!cd.isReady(player, AbilityCooldownManager.Ability.CADEIA)) {
+            event.setShouldConsume(false);
+            event.setCancelled(true);
+            return;
+        }
+
         // Marca o projétil para identificá-lo no impacto.
         snowball.getPersistentDataContainer().set(keyTrapProjectile, PersistentDataType.BYTE, (byte) 1);
+
+        // Lançamento aceito → inicia o cooldown (no-op para OP).
+        cd.start(player, AbilityCooldownManager.Ability.CADEIA);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)

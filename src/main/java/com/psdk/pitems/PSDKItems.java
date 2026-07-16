@@ -206,6 +206,7 @@ public final class PSDKItems {
             lore.add(mm.deserialize("<!italic>  <#a4a4a4>▸ As teias desaparecem após <#fcc850>7 segundos"));
             lore.add(Component.empty());
             lore.add(mm.deserialize("<!italic>  <#cbd1d7>Somente na arena de PvP"));
+            lore.add(mm.deserialize("<!italic>  <#fcc850>Recarga: <#cbd1d7>7 segundos"));
             lore.add(Component.empty());
         }
 

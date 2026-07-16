@@ -213,7 +213,6 @@ public class ShopManager {
                 new ShopEntry(Material.ANVIL,            50),   // 100 coins com o multiplicador global
                 new ShopEntry(Material.FISHING_ROD,      40),   // movido da antiga seção "Outros"
                 new ShopEntry(Material.SPYGLASS,         30),   // movido da antiga seção "Outros"
-                new ShopEntry(Material.ENCHANTED_BOOK, 25000, Map.of(Enchantment.MENDING, 1)),
                 new ShopEntry(Material.POINTED_DRIPSTONE, 30),
                 new ShopEntry(Material.SLIME_BLOCK,       50)
         ));
@@ -245,8 +244,8 @@ public class ShopManager {
                 new ShopEntry(Material.ENCHANTED_BOOK, 350,  Map.of(Enchantment.QUICK_CHARGE, 3)),
                 new ShopEntry(Material.ENCHANTED_BOOK, 300,  Map.of(Enchantment.PIERCING, 4)),
                 // Durabilidade
-                new ShopEntry(Material.ENCHANTED_BOOK, 300,  Map.of(Enchantment.UNBREAKING, 3)),
-                new ShopEntry(Material.ENCHANTED_BOOK, 800,  Map.of(Enchantment.MENDING, 1))
+                new ShopEntry(Material.ENCHANTED_BOOK, 300,   Map.of(Enchantment.UNBREAKING, 3)),
+                new ShopEntry(Material.ENCHANTED_BOOK, 25000, Map.of(Enchantment.MENDING, 1)) // 50.000 coins (×2.0)
         ));
     }
 

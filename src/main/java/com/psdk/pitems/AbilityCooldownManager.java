@@ -47,6 +47,7 @@ public class AbilityCooldownManager {
         ENDER_PEARL("ender_pearl", Material.ENDER_PEARL, 6_000L),
         TROCA_POSICAO("troca_posicao", Material.EGG, 5_000L),
         JAULA("jaula", Material.RED_STAINED_GLASS, 300_000L),
+        CADEIA("cadeia", Material.SNOWBALL, 7_000L),
         SAFE_TNT("safe_tnt", Material.TNT, 4_000L);
 
         private final String id;
