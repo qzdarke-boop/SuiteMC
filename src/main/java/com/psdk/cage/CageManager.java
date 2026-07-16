@@ -56,8 +56,12 @@ public class CageManager {
     private static final int NEG = 3;
     private static final int POS = 4;
     private static final int HITS_TO_BREAK = 5;
-    /** Duração MÁXIMA da estrutura (independente do cooldown do item): 5 minutos. */
-    private static final int CAGE_MAX_DURATION_MINUTES = 5;
+    /**
+     * Duração MÁXIMA da estrutura, INDEPENDENTE do cooldown do item: 3 minutos.
+     * (O cooldown de 5 min para reutilizar o item fica no {@code AbilityCooldownManager.Ability.JAULA}.
+     * A estrutura some primeiro; o cooldown continua correndo os 5 min mesmo assim.)
+     */
+    private static final int CAGE_MAX_DURATION_MINUTES = 3;
     private static final long CAGE_MAX_DURATION_TICKS = CAGE_MAX_DURATION_MINUTES * 60L * 20L;
     /** Dedupe de tentativas de quebra (anti botão-pressionado / eventos duplicados). */
     private static final long ATTEMPT_DEBOUNCE_MS = 250L;

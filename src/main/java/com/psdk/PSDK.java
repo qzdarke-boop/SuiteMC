@@ -649,6 +649,29 @@ public final class PSDK extends JavaPlugin {
     public Location getSpawnLocation() { return spawnLocation; }
     public Location getDeathSpawnLocation() { return deathSpawnLocation; }
 
+    /**
+     * True se o mundo pertence ao Skill Pit — derivado das âncoras oficiais do projeto
+     * (spawn, death-spawn, crates, arena principal e arena/spawn do Boss). Centraliza a
+     * definição de "mundos controlados pelo Skill Pit" para proteções globais (ex.: bloqueio
+     * de coleta de água/lava), sem afetar mundos externos que compartilhem a mesma instância.
+     */
+    public boolean isSkillPitWorld(org.bukkit.World world) {
+        if (world == null) return false;
+        if (matchesWorld(world, spawnLocation)) return true;
+        if (matchesWorld(world, deathSpawnLocation)) return true;
+        if (matchesWorld(world, cratesSpawn)) return true;
+        if (arenaManager != null && world.equals(arenaManager.getCachedWorld())) return true;
+        if (bossManager != null) {
+            if (matchesWorld(world, bossManager.getArena())) return true;
+            if (matchesWorld(world, bossManager.getBossSpawn())) return true;
+        }
+        return false;
+    }
+
+    private static boolean matchesWorld(org.bukkit.World world, Location loc) {
+        return loc != null && world.equals(loc.getWorld());
+    }
+
     public void setSpawnLocation(Location loc) {
         this.spawnLocation = loc;
         try (PreparedStatement ps = databaseManager.getConnection().prepareStatement(

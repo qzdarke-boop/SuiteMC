@@ -65,9 +65,9 @@ public class ShopManager {
     // Três itens centralizados na 2ª linha (slots 11/13/15), com um slot vazio entre eles.
     // Preços centralizados aqui (Troca de Posição = 600, conforme pedido).
     private final List<SpecialEntry> specialItems = List.of(
-            new SpecialEntry(com.psdk.pitems.PSDKItems.ItemType.TROCA_POSICAO, 600,   11),
-            new SpecialEntry(com.psdk.pitems.PSDKItems.ItemType.TRAP,          600,   13),
-            new SpecialEntry(com.psdk.pitems.PSDKItems.ItemType.JAULA,         15000, 15)
+            new SpecialEntry(com.psdk.pitems.PSDKItems.ItemType.TROCA_POSICAO, 600,  11),
+            new SpecialEntry(com.psdk.pitems.PSDKItems.ItemType.TRAP,          600,  13),
+            new SpecialEntry(com.psdk.pitems.PSDKItems.ItemType.JAULA,         8000, 15)
     );
 
     public ShopManager() {
@@ -173,7 +173,7 @@ public class ShopManager {
                 new ShopEntry(Material.LINGERING_POTION, 240, PotionType.STRENGTH),
                 new ShopEntry(Material.LINGERING_POTION, 230, PotionType.WEAKNESS),
                 // Garrafa de XP
-                new ShopEntry(Material.EXPERIENCE_BOTTLE, 100)
+                new ShopEntry(Material.EXPERIENCE_BOTTLE, 15)   // 30 coins final (×2.0)
         ));
 
         // ── COMIDA ─────────────────────────────────────────────────────────────
@@ -186,7 +186,7 @@ public class ShopManager {
                 new ShopEntry(Material.CAKE,              30),
                 new ShopEntry(Material.PUMPKIN_PIE,       12),
                 new ShopEntry(Material.COOKIE,             3),
-                new ShopEntry(Material.GOLDEN_APPLE,    200)
+                new ShopEntry(Material.GOLDEN_APPLE,     125)   // 250 coins final (×2.0)
         ));
 
         // ── UTILITÁRIOS (sub-categorias) ───────────────────────────────────────
@@ -199,7 +199,7 @@ public class ShopManager {
         // (mesmos produtos/preços/slots); só mudou a chave interna e o acesso, que
         // agora passa pelo seletor intermediário Misto → Variados / Itens Especiais.
         items.put("misto_variados", List.of(
-                new ShopEntry(Material.ENDER_PEARL,      80),
+                new ShopEntry(Material.ENDER_PEARL,    62.5), // 125 coins final (×2.0)
                 new ShopEntry(Material.WIND_CHARGE,      60),
                 new ShopEntry(Material.TNT,             150), // explode (dano + kb) mas NÃO quebra blocos
                 new ShopEntry(Material.SHULKER_BOX,     350), // 700 coins com o multiplicador global
@@ -209,7 +209,7 @@ public class ShopManager {
                 new ShopEntry(Material.COBWEB,           20),
                 new ShopEntry(Material.ARROW,             3),
                 new ShopEntry(Material.SPECTRAL_ARROW,    8),
-                new ShopEntry(Material.TOTEM_OF_UNDYING, 800),
+                new ShopEntry(Material.TOTEM_OF_UNDYING, 400), // 800 coins final (×2.0)
                 new ShopEntry(Material.ANVIL,            50),   // 100 coins com o multiplicador global
                 new ShopEntry(Material.FISHING_ROD,      40),   // movido da antiga seção "Outros"
                 new ShopEntry(Material.SPYGLASS,         30),   // movido da antiga seção "Outros"
@@ -245,7 +245,7 @@ public class ShopManager {
                 new ShopEntry(Material.ENCHANTED_BOOK, 300,  Map.of(Enchantment.PIERCING, 4)),
                 // Durabilidade
                 new ShopEntry(Material.ENCHANTED_BOOK, 300,   Map.of(Enchantment.UNBREAKING, 3)),
-                new ShopEntry(Material.ENCHANTED_BOOK, 25000, Map.of(Enchantment.MENDING, 1)) // 50.000 coins (×2.0)
+                new ShopEntry(Material.ENCHANTED_BOOK, 15000, Map.of(Enchantment.MENDING, 1)) // 30.000 coins final (×2.0)
         ));
     }
 

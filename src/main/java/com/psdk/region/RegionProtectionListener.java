@@ -58,8 +58,17 @@ public class RegionProtectionListener implements Listener {
             Material.GRINDSTONE, Material.SMITHING_TABLE
     );
 
+    // ── Bloqueio global de coleta de água/lava (item configurável) ──────────────
+    /** Liga/desliga o bloqueio de coletar água/lava com balde nos mundos do Skill Pit. */
+    private static final boolean BLOCK_LIQUID_PICKUP = true;
+    /** Mensagem exibida ao tentar coletar (padrão visual do projeto). */
+    private static final String LIQUID_PICKUP_MSG = "<#e22c27>Você não pode coletar água ou lava neste modo!";
+    /** Anti-spam da mensagem enquanto o jogador segura o botão. */
+    private static final long LIQUID_MSG_COOLDOWN_MS = 1500L;
+
     private final PSDK plugin;
     private final Map<UUID, Set<String>> playerRegions = new HashMap<>();
+    private final Map<UUID, Long> liquidMsgCooldown = new HashMap<>();
     /** Marca projéteis disparados de dentro de uma área segura (não podem dar dano). */
     private final NamespacedKey safeShotKey;
 
@@ -69,10 +78,11 @@ public class RegionProtectionListener implements Listener {
         startRegionTracker();
     }
 
-    // Evita vazamento: tira o jogador do mapa de regiões quando ele sai.
+    // Evita vazamento: tira o jogador dos mapas quando ele sai.
     @EventHandler
     public void onQuitClearRegions(PlayerQuitEvent event) {
         playerRegions.remove(event.getPlayer().getUniqueId());
+        liquidMsgCooldown.remove(event.getPlayer().getUniqueId());
     }
 
     private RegionManager rm() {
@@ -345,6 +355,42 @@ public class RegionProtectionListener implements Listener {
         if (!rm().isAllowed(loc, RegionFlag.LIQUID_PLACE) || !rm().isAllowed(loc, RegionFlag.PVP)) {
             event.setCancelled(true);
             event.getPlayer().sendActionBar(mm.deserialize("<#e22c27>Você não pode colocar água/lava aqui!"));
+        }
+    }
+
+    // ---- Coletar líquido com balde (água/lava) — BLOQUEIO GLOBAL no Skill Pit ----
+    // Impede a etapa "fabricar balde → pegar líquido do mapa → escapar da arena".
+    // Vale em QUALQUER local dos mundos do Skill Pit (spawn, área segura, arena, fora dela,
+    // cavernas, montanhas, etc.), independente de região/flag. NÃO usa bypass: nenhum jogador
+    // pode obter WATER_BUCKET/LAVA_BUCKET coletando do mundo (staff usa /give se precisar).
+    // Baldes de leite NÃO disparam este evento, então não são afetados. Cobre também
+    // caldeirões de água/lava (mesmo evento). Só age em mundos do Skill Pit — não afeta
+    // outros mundos que compartilhem a instância. LOWEST para bloquear antes de tudo.
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onBucketFill(PlayerBucketFillEvent event) {
+        if (!BLOCK_LIQUID_PICKUP) return;
+        Player player = event.getPlayer();
+        if (!plugin.isSkillPitWorld(player.getWorld())) return;
+
+        // Só água e lava (não bloqueia powder snow nem usos legítimos).
+        Material result  = event.getItemStack()   != null ? event.getItemStack().getType()   : null;
+        Material clicked = event.getBlockClicked() != null ? event.getBlockClicked().getType() : null;
+        boolean waterOrLava =
+                result == Material.WATER_BUCKET || result == Material.LAVA_BUCKET
+                || clicked == Material.WATER || clicked == Material.LAVA
+                || clicked == Material.WATER_CAULDRON || clicked == Material.LAVA_CAULDRON
+                || clicked == Material.BUBBLE_COLUMN;
+        if (!waterOrLava) return;
+
+        event.setCancelled(true);
+        // Anti-desync: cliente volta a ver o balde vazio e o líquido no lugar; sem dupe.
+        player.updateInventory();
+
+        long now = System.currentTimeMillis();
+        Long last = liquidMsgCooldown.get(player.getUniqueId());
+        if (last == null || now - last > LIQUID_MSG_COOLDOWN_MS) {
+            liquidMsgCooldown.put(player.getUniqueId(), now);
+            player.sendActionBar(mm.deserialize(LIQUID_PICKUP_MSG));
         }
     }
 
