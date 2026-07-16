@@ -61,6 +61,8 @@ public class SpeakBridge implements PluginMessageListener {
             return;
         }
 
+        plugin.getLogger().info("[speak] Pedido SPEAK recebido da proxy no canal " + channel + ".");
+
         UUID uuid;
         String text;
         try {
@@ -88,6 +90,8 @@ public class SpeakBridge implements PluginMessageListener {
 
         // Devolve para a proxy pela mesma conexao (jogador) que trouxe o pedido.
         carrier.sendPluginMessage(plugin, CHANNEL, out.toByteArray());
+        plugin.getLogger().info("[speak] Resposta SPEAK_BROADCAST enviada para a proxy (autor: "
+                + sender.getName() + ").");
     }
 
     /**
