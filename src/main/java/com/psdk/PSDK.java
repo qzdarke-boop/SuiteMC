@@ -306,6 +306,7 @@ public final class PSDK extends JavaPlugin {
         registerListeners();
         startTasks();
         registerVip();
+        registerSpeakBridge();
 
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new CratesExpansion(this).register();
@@ -570,6 +571,18 @@ public final class PSDK extends JavaPlugin {
         registerCmd("gg",        new GGCommand(this));
 
         getLogger().info("VipManager (FrostyAnnounce) carregado.");
+    }
+
+    /**
+     * Registra o canal de plugin-message do /speak (proxy VelocityCore).
+     * O /speak e' registrado na proxy; aqui so respondemos ao pedido de
+     * formatacao, mantendo a mesma aparencia do /say (ver {@link com.psdk.chat.SpeakBridge}).
+     */
+    private void registerSpeakBridge() {
+        getServer().getMessenger().registerOutgoingPluginChannel(this, com.psdk.chat.SpeakBridge.CHANNEL);
+        getServer().getMessenger().registerIncomingPluginChannel(this, com.psdk.chat.SpeakBridge.CHANNEL,
+                new com.psdk.chat.SpeakBridge(this));
+        getLogger().info("Ponte do /speak registrada (canal " + com.psdk.chat.SpeakBridge.CHANNEL + ").");
     }
 
     private void setupEconomy() {
