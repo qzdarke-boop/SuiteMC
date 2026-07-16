@@ -5,12 +5,15 @@ import com.psdk.pitems.AbilityCooldownManager;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Boat;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.vehicle.VehicleEnterEvent;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockBurnEvent;
 import org.bukkit.event.block.BlockExplodeEvent;
@@ -55,6 +58,7 @@ public class CageListener implements Listener {
     private final PSDK plugin;
     private final Map<UUID, Long> activateDebounce = new HashMap<>();
     private final Map<UUID, Long> tpMsgCooldown = new HashMap<>();
+    private final Map<UUID, Long> boatMsgCooldown = new HashMap<>();
 
     public CageListener(PSDK plugin) {
         this.plugin = plugin;
@@ -108,6 +112,54 @@ public class CageListener implements Listener {
             hand.setAmount(hand.getAmount() - 1);
         }
         cd.start(player, AbilityCooldownManager.Ability.JAULA);
+    }
+
+    // ─────────────────────── Bloqueio de barcos na Jaula ──────────────────────
+    // Impede o uso de QUALQUER barco (todas as variantes de madeira, chest boat e
+    // balsa de bambu) enquanto o jogador estiver dentro da Jaula — fecha o exploit de
+    // colocar/entrar em barco para escapar ou subir na estrutura.
+
+    /** True se o material é um item de barco (…_BOAT, …_CHEST_BOAT, …_RAFT, …_CHEST_RAFT). */
+    private static boolean isBoatItem(Material m) {
+        if (m == null) return false;
+        String n = m.name();
+        return n.endsWith("_BOAT") || n.endsWith("_RAFT");
+    }
+
+    // Colocar barco: cancela o clique com item de barco na mão enquanto estiver preso.
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onBoatPlace(PlayerInteractEvent event) {
+        Action a = event.getAction();
+        if (a != Action.RIGHT_CLICK_BLOCK && a != Action.RIGHT_CLICK_AIR) return;
+        ItemStack item = event.getItem();
+        if (item == null || !isBoatItem(item.getType())) return;
+
+        Player p = event.getPlayer();
+        if (mgr().getCageAt(p.getLocation()) == null) return; // fora da Jaula: normal
+
+        event.setCancelled(true);
+        p.updateInventory(); // anti-desync do item na mão
+        warnBoat(p);
+    }
+
+    // Entrar em barco: bloqueia montar qualquer barco estando dentro da Jaula.
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onBoatEnter(VehicleEnterEvent event) {
+        if (!(event.getVehicle() instanceof Boat)) return;
+        if (!(event.getEntered() instanceof Player p)) return;
+        if (mgr().getCageAt(p.getLocation()) == null) return;
+
+        event.setCancelled(true);
+        warnBoat(p);
+    }
+
+    private void warnBoat(Player p) {
+        long now = System.currentTimeMillis();
+        Long last = boatMsgCooldown.get(p.getUniqueId());
+        if (last == null || now - last > TP_MSG_COOLDOWN_MS) {
+            boatMsgCooldown.put(p.getUniqueId(), now);
+            p.sendActionBar(mm.deserialize("<#e22c27>Você não pode usar barcos dentro da Jaula!"));
+        }
     }
 
     // ───────────────────────── Tentativas de quebra ───────────────────────────
@@ -249,6 +301,10 @@ public class CageListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onQuit(PlayerQuitEvent event) {
+        UUID id = event.getPlayer().getUniqueId();
+        activateDebounce.remove(id);
+        tpMsgCooldown.remove(id);
+        boatMsgCooldown.remove(id);
         mgr().handlePlayerRemoved(event.getPlayer());
     }
 
