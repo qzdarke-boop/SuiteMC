@@ -11,6 +11,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
@@ -22,14 +23,20 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockDispenseEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.TNTPrimeEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.EntitySpawnEvent;
+import org.bukkit.event.entity.ExplosionPrimeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 
 /**
  * TNT especial da loja. Ao usar (clique direito num bloco) ela é "arremessada"
@@ -67,6 +74,43 @@ public class SafeTntListener implements Listener {
         item.setItemMeta(meta);
     }
 
+    /**
+     * Factory oficial: cria uma nova instância da TNT do /shop já identificada pelo PDC.
+     * A compra deve usar isto (ou {@link #tagItem}) — nunca um {@code new ItemStack(TNT)} cru.
+     */
+    public static ItemStack create(PSDK plugin, int amount) {
+        ItemStack item = new ItemStack(Material.TNT, Math.max(1, amount));
+        tagItem(plugin, item);
+        return item;
+    }
+
+    // ─────────────────────────── Identificação central ─────────────────────────
+    // ÚNICO ponto de verdade. Valida SEMPRE o identificador interno (PDC), nunca o
+    // material/nome/lore/brilho — uma TNT vanilla renomeada ou com a lore copiada NÃO passa.
+
+    /** True se o item é a TNT oficial do /shop (PDC interno). */
+    public boolean isShopTnt(ItemStack item) {
+        if (item == null || item.getType() != Material.TNT) return false;
+        ItemMeta meta = item.getItemMeta();
+        return meta != null && meta.getPersistentDataContainer().has(key, PersistentDataType.BYTE);
+    }
+
+    /** True se a entidade é uma TNT primada originada da TNT do /shop (marcada no spawn). */
+    public boolean isShopTntEntity(Entity entity) {
+        return entity instanceof TNTPrimed tnt
+                && tnt.getPersistentDataContainer().has(key, PersistentDataType.BYTE);
+    }
+
+    /**
+     * Mundo do Skill Pit onde a regra "só a TNT do /shop funciona" vale (a arena de PvP).
+     * Se a arena ainda não foi definida, não aplica restrições (evita afetar setup/outros mundos).
+     */
+    private boolean isSkillPitWorld(World world) {
+        if (world == null) return false;
+        World arena = plugin.getArenaManager().getCachedWorld();
+        return arena != null && world.equals(arena);
+    }
+
     // Uso da TNT (clique direito num bloco). Spawna a TNT ativada como entidade,
     // então funciona mesmo se houver entidade/jogador ocupando o lugar.
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = false)
@@ -76,9 +120,8 @@ public class SafeTntListener implements Listener {
         if (action != Action.RIGHT_CLICK_BLOCK && action != Action.RIGHT_CLICK_AIR) return;
 
         ItemStack hand = event.getItem();
-        if (hand == null || hand.getType() != Material.TNT) return;
-        ItemMeta meta = hand.getItemMeta();
-        if (meta == null || !meta.getPersistentDataContainer().has(key, PersistentDataType.BYTE)) return;
+        // Identificação SEMPRE pelo PDC (factory oficial) — TNT vanilla nunca passa daqui.
+        if (!isShopTnt(hand)) return;
 
         final Player player = event.getPlayer();
 
@@ -134,12 +177,64 @@ public class SafeTntListener implements Listener {
     /** Alcance (blocos) onde ainda há dano; além disso o dano é zero. */
     private static final double DAMAGE_RANGE = EXPLOSION_POWER * 2.0; // ~14 blocos
 
-    // Define o raio (potência) da explosão da TNT da loja.
+    // ───────────── Bloqueio TOTAL de TNT vanilla no Skill Pit ──────────────────
+    // A TNT do /shop NUNCA vira um bloco: ela nasce direto como entidade primada
+    // identificada (ver onUse). Logo, qualquer TNT como BLOCO ou como entidade SEM o
+    // PDC oficial é vanilla (Criativo, /give, dispenser, redstone, cadeia, /summon,
+    // mapa, plugin…) e não pode ser colocada, primada nem explodir. Regras baseadas
+    // SOMENTE no identificador interno, nunca na origem presumida. Valem inclusive p/ OP.
+
+    /** Ninguém coloca bloco de TNT na arena (a do /shop é entidade, não bloco). */
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onPrime(org.bukkit.event.entity.ExplosionPrimeEvent event) {
+    public void onBlockPlace(BlockPlaceEvent event) {
+        if (event.getBlockPlaced().getType() != Material.TNT) return;
+        if (!isSkillPitWorld(event.getBlock().getWorld())) return;
+        event.setCancelled(true); // não coloca, não consome
+        event.getPlayer().sendActionBar(MiniMessage.miniMessage()
+                .deserialize("<#e22c27>Só a TNT da loja pode ser usada aqui!"));
+    }
+
+    /** Bloco de TNT vanilla nunca prima (pederneira, fogo, lava, redstone, botão, dispenser,
+     *  observador, flecha flamejante, outra explosão…). Bloco preservado, sem drop/duplicação. */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onTntPrime(TNTPrimeEvent event) {
+        if (!isSkillPitWorld(event.getBlock().getWorld())) return;
+        event.setCancelled(true);
+    }
+
+    /** Entidade TNTPrimed sem identidade do /shop nunca chega a existir na arena
+     *  (dispenser, /summon, cadeia, plugins…). A do /shop já tem o PDC setado no spawn. */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onTntSpawn(EntitySpawnEvent event) {
         if (!(event.getEntity() instanceof TNTPrimed tnt)) return;
-        if (!tnt.getPersistentDataContainer().has(key, PersistentDataType.BYTE)) return;
-        event.setRadius(EXPLOSION_POWER);
+        if (isShopTntEntity(tnt)) return;
+        if (!isSkillPitWorld(tnt.getWorld())) return;
+        event.setCancelled(true);
+    }
+
+    /** Dispenser não dispensa/prima TNT na arena. */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onDispense(BlockDispenseEvent event) {
+        if (event.getItem().getType() != Material.TNT) return;
+        if (!isSkillPitWorld(event.getBlock().getWorld())) return;
+        event.setCancelled(true);
+    }
+
+    // Potência da explosão da TNT do /shop + trava final: TNTPrimed sem identidade oficial
+    // não explode (rede de segurança caso escape do onTntSpawn).
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onPrime(ExplosionPrimeEvent event) {
+        if (!(event.getEntity() instanceof TNTPrimed tnt)) return;
+        if (isShopTntEntity(tnt)) {
+            event.setRadius(EXPLOSION_POWER);
+            return;
+        }
+        // TNT primada vanilla: cancela a explosão, sem fogo, e remove a entidade.
+        if (isSkillPitWorld(tnt.getWorld())) {
+            event.setCancelled(true);
+            event.setFire(false);
+            tnt.remove();
+        }
     }
 
     // Dano da TNT da loja: substitui o dano vanilla (que a armadura/Blast Protection
@@ -281,7 +376,17 @@ public class SafeTntListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onExplode(EntityExplodeEvent event) {
         if (!(event.getEntity() instanceof TNTPrimed tnt)) return;
-        if (!tnt.getPersistentDataContainer().has(key, PersistentDataType.BYTE)) return;
+
+        // Trava final: TNT primada sem identidade do /shop não destrói nada na arena
+        // (não quebra blocos, sem dano/knockback/cadeia) e é removida.
+        if (!isShopTntEntity(tnt)) {
+            if (isSkillPitWorld(tnt.getWorld())) {
+                event.setCancelled(true);
+                event.blockList().clear();
+                tnt.remove();
+            }
+            return;
+        }
 
         ArenaManager arena = plugin.getArenaManager();
         // Mantém na lista (vai destruir) tudo, menos blocos estruturais da arena.
