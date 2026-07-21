@@ -3,15 +3,20 @@ package com.psdk.shop;
 import com.psdk.PSDK;
 import com.psdk.region.RegionFlag;
 import com.psdk.thepit.ArenaManager;
+import org.bukkit.FluidCollisionMode;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TNTPrimed;
+import org.bukkit.util.BoundingBox;
+import org.bukkit.util.RayTraceResult;
+import org.bukkit.util.Vector;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -140,8 +145,9 @@ public class SafeTntListener implements Listener {
     // Dano da TNT da loja: substitui o dano vanilla (que a armadura/Blast Protection
     // quase zera no full netherite) por dano REAL que ignora armadura e proteção,
     // escalando com a distância — quanto mais perto, mais dano; longe, quase nada.
-    // Obs.: se um bloco bloqueia totalmente a visão, o evento nem dispara (raytrace
-    // vanilla), então quem se protege com um bloco na frente não toma dano.
+    // O dano é escalado pela EXPOSIÇÃO real à explosão (linha de visão): blocos sólidos
+    // entre a TNT e o jogador reduzem o dano e, se cobrem totalmente, o ANULAM. Sem isto,
+    // o dano por distância atravessaria paredes/vidros (era o bug de "TNT atravessando").
     // HIGHEST: roda depois do redutor de dano da arena (TntListener, HIGH) para
     // que o dano real da TNT da loja prevaleça mesmo dentro da arena.
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -159,7 +165,12 @@ public class SafeTntListener implements Listener {
         if (factor <= 0) { event.setCancelled(true); return; }
         if (factor > 1) factor = 1;
 
-        double dmg = MAX_DAMAGE * factor;
+        // Linha de visão: se há blocos sólidos entre a explosão e o jogador (parede, teto,
+        // piso, vidro da Jaula, qualquer bloco na frente), reduz/anula o dano.
+        double exposure = explosionExposure(tnt.getLocation(), victim);
+        if (exposure <= 0.0) { event.setCancelled(true); return; }
+
+        double dmg = MAX_DAMAGE * factor * exposure;
 
         // Zera a redução por armadura e por encantamentos de proteção -> dano "puro".
         // Absorção e Resistência continuam valendo (balanceamento justo).
@@ -183,6 +194,45 @@ public class SafeTntListener implements Listener {
         var rm = plugin.getRegionManager();
         if (rm == null) return false;
         return !rm.isAllowed(loc, RegionFlag.PVP) || !rm.isAllowed(loc, RegionFlag.EXPLOSIONS);
+    }
+
+    /**
+     * Fração [0..1] do corpo do alvo que a explosão "enxerga" sem obstrução por blocos
+     * sólidos — mesma ideia do cálculo de exposição da explosão vanilla, mas próprio,
+     * porque o dano da TNT da loja é por distância e, sozinho, ignoraria paredes.
+     *
+     * <p>Traça raios do centro da explosão até uma grade de pontos amostrais na bounding
+     * box do alvo. Blocos passáveis (ar, grama, tochas…) são ignorados; qualquer bloco
+     * sólido (parede, teto, piso, VIDRO da Jaula, bloco colocado na frente) obstrui.
+     *
+     * @return 1.0 = totalmente exposto; 0.0 = totalmente coberto (nenhum dano).
+     */
+    private double explosionExposure(Location source, LivingEntity victim) {
+        World world = victim.getWorld();
+        if (source == null || source.getWorld() == null || !source.getWorld().equals(world)) {
+            return 1.0;
+        }
+        BoundingBox box = victim.getBoundingBox();
+        final double[] frac = {0.05, 0.5, 0.95};
+        int visible = 0, total = 0;
+        for (double fx : frac) {
+            for (double fy : frac) {
+                for (double fz : frac) {
+                    total++;
+                    double tx = box.getMinX() + (box.getMaxX() - box.getMinX()) * fx;
+                    double ty = box.getMinY() + (box.getMaxY() - box.getMinY()) * fy;
+                    double tz = box.getMinZ() + (box.getMaxZ() - box.getMinZ()) * fz;
+                    Vector dir = new Vector(tx - source.getX(), ty - source.getY(), tz - source.getZ());
+                    double d = dir.length();
+                    if (d < 1.0E-4) { visible++; continue; }
+                    // ignorePassableBlocks=true → só blocos sólidos (inclui vidro) obstruem.
+                    RayTraceResult res = world.rayTraceBlocks(
+                            source, dir.normalize(), d, FluidCollisionMode.NEVER, true);
+                    if (res == null || res.getHitBlock() == null) visible++;
+                }
+            }
+        }
+        return total == 0 ? 1.0 : (double) visible / total;
     }
 
     // Explosão da TNT da loja -> destrói os blocos ao redor, EXCETO a estrutura
