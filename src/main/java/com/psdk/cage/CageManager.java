@@ -371,6 +371,68 @@ public class CageManager {
         return getCageAt(loc) != null;
     }
 
+    /**
+     * True se o jogador está FISICAMENTE dentro do interior de uma Jaula ATIVA neste
+     * exato momento. Baseia-se na posição atual + estado ativo real da estrutura
+     * (via {@link #getCageAt}), e NUNCA em listas antigas de presos: uma Jaula já
+     * encerrada/removida ({@code active=false}, fora dos índices) retorna {@code false},
+     * liberando imediatamente as habilidades que dependem desta checagem (ex.: Ender Pearl).
+     */
+    public boolean isPlayerInsideActiveCage(Player player) {
+        return player != null && getCageAt(player.getLocation()) != null;
+    }
+
+    // ──────────────── Fronteira de explosão (TNT / creeper / etc.) ─────────────
+
+    /**
+     * Determina se uma explosão e um jogador estão em LADOS OPOSTOS da fronteira de
+     * uma MESMA Jaula ativa (a casca de vidro vermelho). É a verificação central e
+     * ÚNICA usada por todas as rotas de dano de explosão (TNT personalizada, TNT da
+     * loja, TNT colocada, explosão vanilla) para conter a explosão ANTES de aplicar
+     * dano, knockback, fogo, desgaste de armadura/Escudo e Combat Log.
+     *
+     * <p>Como os vidros da Jaula são blocos TEMPORÁRIOS controlados pelo plugin, esta
+     * checagem NÃO depende do ray tracing/lista de blocos sólidos da explosão vanilla
+     * (que vaza dano pelas quinas): consulta o gerenciador real de Jaulas — interior
+     * oco + rastreio do preso.
+     *
+     * <p>Regras:
+     * <ul>
+     *   <li>Explosão fora + jogador dentro → separados (bloqueado);</li>
+     *   <li>Explosão dentro + jogador fora → separados (bloqueado);</li>
+     *   <li>Explosão e jogador na MESMA Jaula → NÃO separados (segue a lógica normal
+     *       do Escudo, idêntica à de fora da Jaula);</li>
+     *   <li>Explosão e jogador ambos fora de qualquer Jaula → NÃO separados
+     *       (comportamento normal preservado).</li>
+     * </ul>
+     *
+     * @return {@code true} se a explosão deve ser COMPLETAMENTE bloqueada para este jogador.
+     */
+    public boolean isSeparatedByActiveCage(Location explosionLocation, Player player) {
+        if (explosionLocation == null || player == null) return false;
+        Cage inCage = resolvePlayerCage(player);
+        Cage boomCage = getCageAt(explosionLocation);
+        // Mesmo lado (mesma Jaula ativa, ou ambos fora de qualquer Jaula) → não bloqueia.
+        // Lados diferentes de uma fronteira de Jaula ativa → explosão contida.
+        return inCage != boomCage;
+    }
+
+    /**
+     * Jaula ativa que contém o jogador. Usa a posição atual (interior oco) e, como
+     * reforço anti-dessincronização (knockback/glitch podem empurrar o preso para cima
+     * da casca por um instante), o rastreio do preso mantido pelo gerenciador.
+     */
+    private Cage resolvePlayerCage(Player player) {
+        Cage byLoc = getCageAt(player.getLocation());
+        if (byLoc != null) return byLoc;
+        UUID tracked = playerCage.get(player.getUniqueId());
+        if (tracked != null) {
+            Cage c = cages.get(tracked);
+            if (c != null && c.isActive()) return c;
+        }
+        return null;
+    }
+
     // ─────────────── Integração com o RESET da arena (proteção de Jaulas) ───────
     // Chamado pelos resets (arena principal e arena do Boss) para CADA bloco do snapshot
     // ANTES de aplicá-lo. Se a coordenada pertence a uma Jaula ativa, o reset é PULADO

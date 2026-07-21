@@ -66,9 +66,16 @@ public class RegionProtectionListener implements Listener {
     /** Anti-spam da mensagem enquanto o jogador segura o botão. */
     private static final long LIQUID_MSG_COOLDOWN_MS = 1500L;
 
+    /** Mensagem (chat, não ActionBar) ao tentar usar Ender Pearl preso na Jaula. */
+    private static final String CAGE_PEARL_MSG =
+            "<#e22c27><bold>Jaula ▸ <reset><#cbd1d7>Você não pode usar Ender Pearl preso em uma Jaula!";
+    /** Anti-spam da mensagem da Jaula (segurar o botão / cliques repetidos). */
+    private static final long CAGE_PEARL_MSG_COOLDOWN_MS = 1500L;
+
     private final PSDK plugin;
     private final Map<UUID, Set<String>> playerRegions = new HashMap<>();
     private final Map<UUID, Long> liquidMsgCooldown = new HashMap<>();
+    private final Map<UUID, Long> cagePearlMsgCooldown = new HashMap<>();
     /** Marca projéteis disparados de dentro de uma área segura (não podem dar dano). */
     private final NamespacedKey safeShotKey;
 
@@ -83,6 +90,7 @@ public class RegionProtectionListener implements Listener {
     public void onQuitClearRegions(PlayerQuitEvent event) {
         playerRegions.remove(event.getPlayer().getUniqueId());
         liquidMsgCooldown.remove(event.getPlayer().getUniqueId());
+        cagePearlMsgCooldown.remove(event.getPlayer().getUniqueId());
     }
 
     private RegionManager rm() {
@@ -409,6 +417,14 @@ public class RegionProtectionListener implements Listener {
     public void onEnderPearlLaunch(ProjectileLaunchEvent event) {
         if (!(event.getEntity() instanceof org.bukkit.entity.EnderPearl pearl)) return;
         if (!(pearl.getShooter() instanceof Player player)) return;
+        // JAULA (rede de segurança p/ rotas que não passam pelo PlayerLaunchProjectileEvent):
+        // preso em Jaula ativa nunca dispara pearl. ANTES do bypass → vale para OP também.
+        // Silencioso: a mensagem é enviada no gate de lançamento (onEnderPearlCooldown).
+        if (plugin.getCageManager() != null
+                && plugin.getCageManager().isPlayerInsideActiveCage(player)) {
+            event.setCancelled(true);
+            return;
+        }
         if (bypass(player)) return;
         if (!rm().isAllowed(player.getLocation(), RegionFlag.ENDERPEARL)) {
             event.setCancelled(true);
@@ -431,6 +447,20 @@ public class RegionProtectionListener implements Listener {
         if (!(event.getProjectile() instanceof org.bukkit.entity.EnderPearl)) return;
         Player player = event.getPlayer();
 
+        // JAULA: preso dentro de uma Jaula ativa NÃO pode lançar Ender Pearl. Verificação
+        // pela POSIÇÃO ATUAL + estado ativo real (nunca por lista antiga de presos), via
+        // o gerenciador de Jaulas. Roda ANTES de região/cooldown e ANTES do
+        // ProjectileLaunchEvent: não consome o item (nenhuma mão), não cria o projétil,
+        // não inicia nem renova o cooldown de 6s. Vale também para OP — o bypass de OP é
+        // só de TEMPO (no AbilityCooldownManager), não das proteções da habilidade.
+        if (plugin.getCageManager() != null
+                && plugin.getCageManager().isPlayerInsideActiveCage(player)) {
+            event.setShouldConsume(false);
+            event.setCancelled(true);
+            warnCagePearl(player);
+            return;
+        }
+
         // Região onde ender pearls estão desativadas: bloqueia SEM consumir (vale p/ OP também).
         if (!rm().isAllowed(player.getLocation(), RegionFlag.ENDERPEARL)) {
             event.setShouldConsume(false);
@@ -450,6 +480,15 @@ public class RegionProtectionListener implements Listener {
 
         // Lançamento aceito → inicia o cooldown de 6s (start() é no-op para OP).
         cd.start(player, AbilityCooldownManager.Ability.ENDER_PEARL);
+    }
+
+    /** Aviso da Jaula (chat, não ActionBar) com anti-spam por jogador. */
+    private void warnCagePearl(Player player) {
+        long now = System.currentTimeMillis();
+        Long last = cagePearlMsgCooldown.get(player.getUniqueId());
+        if (last != null && now - last < CAGE_PEARL_MSG_COOLDOWN_MS) return;
+        cagePearlMsgCooldown.put(player.getUniqueId(), now);
+        player.sendMessage(mm.deserialize(CAGE_PEARL_MSG));
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)

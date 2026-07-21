@@ -24,6 +24,8 @@ import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.BlockPistonExtendEvent;
 import org.bukkit.event.block.BlockPistonRetractEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -32,6 +34,7 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -188,6 +191,51 @@ public class CageListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onEntityExplode(EntityExplodeEvent event) {
         event.blockList().removeIf(b -> mgr().getCageByBlock(b) != null);
+    }
+
+    // ─────────────── Explosão contida pela estrutura da Jaula ──────────────────
+    // A casca de vidro vermelho é um limite físico completo: uma explosão de um lado
+    // NÃO pode atingir quem está do outro lado. Como os vidros são blocos temporários
+    // do plugin, não confiamos só no ray tracing/lista de blocos sólidos da explosão
+    // (que vaza dano/knockback pelas quinas) — consultamos o gerenciador real de Jaulas.
+    //
+    // Roda em LOW, ANTES das rotas de dano da TNT (multiplicador da arena em HIGH e
+    // dano real da TNT da loja em HIGHEST, ambos ignoreCancelled=true). Quando a Jaula
+    // separa explosão e jogador, cancela o evento e, com isso, de uma só vez:
+    //   • zera o dano;                    • não desgasta armadura;
+    //   • não desgasta/quebra o Escudo    • não aciona Combat Log;
+    //     (a Jaula bloqueia ANTES de o    • (combinado com a neutralização de
+    //      Escudo ser sequer avaliado);      velocidade abaixo) zera o knockback.
+    // Fogo não se aplica: essas TNTs não são incendiárias, e a estrutura já não é
+    // danificada (ver onEntityExplode). Quando explosão e jogador estão na MESMA Jaula
+    // (ou ambos fora dela), este handler NÃO interfere: a lógica normal do Escudo,
+    // idêntica à de fora da Jaula, é preservada integralmente.
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void onCagedExplosionDamage(EntityDamageByEntityEvent event) {
+        if (event.getCause() != EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) return;
+        if (!(event.getEntity() instanceof Player player)) return;
+
+        Location source = event.getDamager().getLocation();
+        if (!mgr().isSeparatedByActiveCage(source, player)) return;
+
+        // Explosão contida pela Jaula: bloqueio TOTAL (dano/armadura/Escudo/Combat Log).
+        event.setCancelled(true);
+        // O knockback da explosão é aplicado pelo servidor logo após este evento, à parte
+        // do dano; neutraliza para que uma explosão bloqueada nunca arremesse o jogador.
+        neutralizeExplosionKnockback(player);
+    }
+
+    /**
+     * Neutraliza o empurrão da explosão que o servidor aplica logo depois do evento de
+     * dano (o knockback vanilla é somado à velocidade independentemente do dano ter sido
+     * cancelado). Restaura, no tick seguinte, a velocidade que o jogador tinha ANTES do
+     * empurrão — garantindo que "dano zero" implique também "knockback zero".
+     */
+    private void neutralizeExplosionKnockback(Player player) {
+        final Vector before = player.getVelocity();
+        plugin.getServer().getScheduler().runTask(plugin, () -> {
+            if (player.isOnline()) player.setVelocity(before);
+        });
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
