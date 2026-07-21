@@ -160,15 +160,37 @@ public class SafeTntListener implements Listener {
         // TNT, então precisamos cancelar aqui explicitamente).
         if (isSafeArea(victim.getLocation())) { event.setCancelled(true); return; }
 
-        double dist = victim.getLocation().distance(tnt.getLocation());
+        final Location boom = tnt.getLocation();
+
+        // (1) JAULA: se a explosão e o jogador estão em lados opostos de uma Jaula ativa,
+        //     a estrutura contém a explosão por completo — bloqueio total, ANTES do Escudo
+        //     (a Jaula protege mesmo sem escudo). Verificação geométrica pelo gerenciador
+        //     real de Jaulas (não depende do raytrace, que vazaria pelas quinas). Feita AQUI,
+        //     na própria rota que aplica o dano, para nunca escapar por ordem de eventos.
+        if (victim instanceof Player caged
+                && plugin.getCageManager() != null
+                && plugin.getCageManager().isSeparatedByActiveCage(boom, caged)) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // (2) LINHA DE VISÃO: bloco sólido entre a explosão e o jogador (parede, teto, piso,
+        //     vidro, qualquer bloco na frente) reduz o dano e, se cobre totalmente, o ANULA.
+        double exposure = explosionExposure(boom, victim);
+        if (exposure <= 0.0) { event.setCancelled(true); return; }
+
+        // (3) ESCUDO: defendendo (escudo levantado, não quebrado/em recarga) e virado para a
+        //     explosão → bloqueio TOTAL. Mesma regra dentro e fora da Jaula. Escudo quebrado
+        //     (isBlocking() == false) NÃO bloqueia. Escudo virado para o lado errado idem.
+        if (victim instanceof Player shielder && isBlockingExplosion(shielder, boom)) {
+            event.setCancelled(true);
+            return;
+        }
+
+        double dist = victim.getLocation().distance(boom);
         double factor = 1.0 - (dist / DAMAGE_RANGE);
         if (factor <= 0) { event.setCancelled(true); return; }
         if (factor > 1) factor = 1;
-
-        // Linha de visão: se há blocos sólidos entre a explosão e o jogador (parede, teto,
-        // piso, vidro da Jaula, qualquer bloco na frente), reduz/anula o dano.
-        double exposure = explosionExposure(tnt.getLocation(), victim);
-        if (exposure <= 0.0) { event.setCancelled(true); return; }
 
         double dmg = MAX_DAMAGE * factor * exposure;
 
@@ -233,6 +255,25 @@ public class SafeTntListener implements Listener {
             }
         }
         return total == 0 ? 1.0 : (double) visible / total;
+    }
+
+    /**
+     * True se o jogador está DEFENDENDO com escudo (levantado, não quebrado/em recarga)
+     * e virado para a explosão — caso em que o Escudo bloqueia o dano por completo.
+     *
+     * <p>Usa {@link Player#isBlocking()} (false quando o escudo está quebrado/desabilitado
+     * por machado ou ainda não levantado) + a MESMA checagem direcional do escudo vanilla:
+     * a fonte precisa estar no arco frontal (produto escalar no plano horizontal). Assim a
+     * regra é idêntica dentro e fora da Jaula: de frente bloqueia, de costas/lado não.
+     */
+    private boolean isBlockingExplosion(Player player, Location source) {
+        if (!player.isBlocking()) return false;
+        Vector view = player.getEyeLocation().getDirection();
+        Vector toSource = player.getLocation().toVector().subtract(source.toVector());
+        toSource.setY(0);
+        if (toSource.lengthSquared() < 1.0E-6) return true; // explosão na mesma coluna
+        toSource.normalize();
+        return toSource.dot(view) < 0.0;
     }
 
     // Explosão da TNT da loja -> destrói os blocos ao redor, EXCETO a estrutura

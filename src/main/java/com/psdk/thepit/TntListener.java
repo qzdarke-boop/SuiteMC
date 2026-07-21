@@ -64,8 +64,16 @@ public class TntListener implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onTntDamage(EntityDamageByEntityEvent event) {
         if (!(event.getEntity() instanceof Player victim)) return;
-        if (!(event.getDamager() instanceof TNTPrimed)) return;
+        if (!(event.getDamager() instanceof TNTPrimed tnt)) return;
         if (!plugin.getArenaManager().isInsideArena(victim.getLocation())) return;
+
+        // Jaula: explosão do outro lado da estrutura → sem dano (defesa em profundidade,
+        // na própria rota da TNT vanilla; independe do handler da CageListener).
+        if (plugin.getCageManager() != null
+                && plugin.getCageManager().isSeparatedByActiveCage(tnt.getLocation(), victim)) {
+            event.setCancelled(true);
+            return;
+        }
 
         event.setDamage(event.getDamage() * DAMAGE_MULTIPLIER);
     }
