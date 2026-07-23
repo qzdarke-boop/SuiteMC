@@ -21,6 +21,8 @@ public class KitsVipGUI {
 
     public static final String TITLE     = "<#a4a4a4>Kits VIP";
     public static final int    SLOT_BACK = 49;
+    /** Cabeça da Loja da Suite: canto inferior DIREITO (slot mais baixo/à direita livre). */
+    public static final int    SLOT_STORE = 53;
 
     // Coluna Premium (rosa) — botão 1D, vidro 7D, concreto 30D
     public static final int SLOT_PREMIUM_1D  = 10;
@@ -98,6 +100,8 @@ public class KitsVipGUI {
         setColumn(inv, 3, SUITE_KITS, playerId, cooldowns);
 
         inv.setItem(SLOT_BACK, backButton());
+        inv.setItem(SLOT_STORE, com.psdk.social.SuiteStore.createHead(
+                com.psdk.social.SuiteStore.Context.KITS_VIP));
         return inv;
     }
 

@@ -67,7 +67,8 @@ public class KitsGUIListener implements Listener {
         } else if (slot == KitsGUI.SLOT_VIP) {
             openNextTick(player, KitsVipGUI.build(player.getUniqueId(), cooldowns()));
         } else if (slot == KitsGUI.SLOT_WEBSITE) {
-            openNextTick(player, KitsWebsiteGUI.build());
+            // Cabeça da Loja da Suite: envia o site + cupom do dia no chat (menu segue aberto).
+            com.psdk.social.SuiteStore.sendStoreMessage(player);
         }
     }
 
@@ -108,6 +109,12 @@ public class KitsGUIListener implements Listener {
 
         if (slot == KitsVipGUI.SLOT_BACK) {
             openNextTick(player, KitsGUI.build());
+            return;
+        }
+
+        if (slot == KitsVipGUI.SLOT_STORE) {
+            // Cabeça da Loja da Suite: mesma função da cabeça do menu principal.
+            com.psdk.social.SuiteStore.sendStoreMessage(player);
             return;
         }
 

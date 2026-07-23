@@ -29,15 +29,24 @@ public class CombatListener implements Listener {
         Player attacker = resolveAttacker(event.getDamager());
         if (attacker == null || attacker == victim) return;
         if (plugin.getAfkManager().isInAfkWorld(attacker)) return;
+
+        // Só RENOVA o combate quando houve dano REAL de jogador contra jogador. Um golpe
+        // totalmente absorvido pelo Escudo (dano final 0), knockback sem dano ou hit sem
+        // efeito NÃO é combate válido e não pode renovar/segurar o Combat Log — senão o
+        // jogador ficaria preso em combate (e punível ao sair) sem ter sofrido nada.
+        // Ataques cancelados/bloqueados por região ou Jaula já não chegam aqui
+        // (ignoreCancelled=true; a proteção de região roda antes, em prioridade menor).
+        if (event.getFinalDamage() <= 0.0) return;
+
         if (!plugin.getRegionManager().isAllowed(victim.getLocation(), RegionFlag.PVP)) {
             // Na zona segura o PvP só continua quando AMBOS já estão em combate
             // (mesma exceção do RegionProtectionListener). Nesse caso o golpe é
             // válido e PRECISA renovar o tempo de combate — senão o cooldown ia
             // só descendo e expirava mesmo enquanto a luta continuava na área segura.
-            if (!plugin.getCombatManager().isInCombat(attacker)
-                    || !plugin.getCombatManager().isInCombat(victim)) return;
+            if (!plugin.getCombatManager().isInActiveCombat(attacker)
+                    || !plugin.getCombatManager().isInActiveCombat(victim)) return;
         }
-        plugin.getCombatManager().registerHit(victim, attacker);
+        plugin.getCombatManager().startOrRefreshCombat(attacker, victim);
     }
 
     private Player resolveAttacker(Entity damager) {

@@ -1,5 +1,6 @@
 package com.psdk.kits;
 
+import com.psdk.social.SuiteStore;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -41,13 +42,9 @@ public class KitsGUI {
                     "<!italic><#10fc46>ᴄʟɪǫᴜᴇ ᴘᴀʀᴀ ᴀᴄᴇssᴀʀ"
                 )));
 
-        inv.setItem(SLOT_WEBSITE, makeButton(Material.ENDER_CHEST,
-                "<!italic><#fcc850>Kits Website",
-                List.of(
-                    "<!italic><#848c94>Kits exclusivos do website",
-                    "",
-                    "<!italic><#10fc46>ᴄʟɪǫᴜᴇ ᴘᴀʀᴀ ᴀᴄᴇssᴀʀ"
-                )));
+        // Loja da Suite: substitui o antigo ícone "Kits Website" (baú do ender) pela
+        // cabeça personalizada. Ao clicar, envia o site no chat (ver KitsGUIListener).
+        inv.setItem(SLOT_WEBSITE, SuiteStore.createHead(SuiteStore.Context.KITS_MAIN));
 
         return inv;
     }

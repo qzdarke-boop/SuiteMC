@@ -41,6 +41,7 @@ public class CrateGUIListener implements Listener {
         int slot = event.getSlot();
         Crate crate = gui.getCrate();
 
+        if (gui.isStoreSlot(slot))  { com.psdk.social.SuiteStore.sendStoreMessage(player); return; }
         if (gui.isBuySlot(slot))    { handleBuy(player, gui, crate, slot); return; }
         if (gui.isRewardSlot(slot)) { handleClaim(player, gui, crate, slot); }
     }

@@ -79,17 +79,35 @@ public class PlayerSessionListener implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         CombatInventorySaveManager combatSave = plugin.getCombatInventorySaveManager();
-        boolean inCombat = plugin.getCombatManager().isInCombat(player);
+        boolean stopping = plugin.getServer().isStopping();
 
-        // No reinício/parada do servidor NÃO pune combat log (senão todo mundo em combate morre e perde tudo).
-        if (!plugin.getServer().isStopping() && plugin.getCombatManager().shouldKillOnQuit(player)) {
+        // DECISÃO ÚNICA, no instante EXATO da saída, pela fonte única do Combat Log
+        // (timestamp de expiração comparado ao agora — nunca cache antigo). O MESMO
+        // resultado governa punição, salvamento de posição e limpeza de snapshots.
+        // No reinício/parada do servidor NÃO pune (senão todos em combate morrem e perdem
+        // tudo). Se o Combat Log já expirou, independentemente da região (arena ou área
+        // segura), sair não gera punição alguma.
+        boolean activeCombat = plugin.getCombatManager().isInActiveCombat(player);
+        boolean punish = !stopping && activeCombat;
+
+        if (plugin.getCombatManager().isDebug()) {
+            plugin.getLogger().info("[CombatLog] QUIT " + player.getName() + " ("
+                    + player.getUniqueId() + ") stopping=" + stopping
+                    + ", pvpArea=" + plugin.getReconnectManager().isPvpArea(player.getLocation())
+                    + ", " + plugin.getCombatManager().describeSession(player.getUniqueId())
+                    + " -> decisao=" + (punish ? "PUNIR (kill)" : "NAO PUNIR"));
+        }
+
+        if (punish) {
             player.setHealth(0);
-        } else if (plugin.getServer().isStopping() && combatSave != null) {
+        } else if (stopping && combatSave != null) {
             combatSave.saveSync(player);
-        } else if (!plugin.getServer().isStopping() && combatSave != null
-                && !inCombat) {
+        } else if (combatSave != null) {
+            // Saída normal SEM Combat Log ativo: remove snapshots pendentes (não há punição).
             combatSave.clearAllSnapshotsForPlayerSync(player.getUniqueId());
         }
+
+        boolean inCombat = activeCombat;
 
         // Sem Combat Log: salva a posição p/ restaurar na reconexão (arena de PvP volta
         // ao mesmo lugar; área segura vai ao spawn). Com Combat Log: NÃO salva — as

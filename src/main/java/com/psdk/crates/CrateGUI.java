@@ -30,6 +30,9 @@ public class CrateGUI implements InventoryHolder {
     public static final int[] BUY_AMOUNTS = {1, 3, 5, 10, 25};
     private static final Set<Integer> BUY_SLOT_SET = Set.of(29, 30, 31, 32, 33);
 
+    /** Cabeça da Loja da Suite: ao lado direito da opção de 25 chaves (slot 33). */
+    public static final int STORE_HEAD_SLOT = 34;
+
     private static final double[][] PACOTES = {
             {1,  0.00},
             {3,  0.05},
@@ -75,7 +78,13 @@ public class CrateGUI implements InventoryHolder {
             }
         }
 
+        // Cabeça da Loja da Suite ao lado das 25 chaves — mesmo slot nas três caixas.
+        // Criada aqui (na abertura do menu) para o cupom refletir sempre o dia atual.
+        inventory.setItem(STORE_HEAD_SLOT,
+                com.psdk.social.SuiteStore.createHead(com.psdk.social.SuiteStore.Context.CRATES));
     }
+
+    public boolean isStoreSlot(int slot) { return slot == STORE_HEAD_SLOT; }
 
     /** Devolve uma cópia do item de recompensa com uma linha vazia + "CLIQUE PARA COLETAR" no fim da lore. */
     private static ItemStack decorateForDisplay(ItemStack original) {
